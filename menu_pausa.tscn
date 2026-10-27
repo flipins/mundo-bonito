@@ -1,0 +1,94 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://menu_pausa.gd" id="1_pausa"]
+
+[node name="MenuPausa" type="CanvasLayer"]
+process_mode = 3
+layer = 100
+script = ExtResource("1_pausa")
+
+[node name="Fondo" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Principal" type="CenterContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Botones" type="VBoxContainer" parent="Principal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Titulo" type="Label" parent="Principal/Botones"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Pausa"
+horizontal_alignment = 1
+
+[node name="BotonContinuar" type="Button" parent="Principal/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 48)
+layout_mode = 2
+text = "Continuar"
+
+[node name="BotonOpciones" type="Button" parent="Principal/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 48)
+layout_mode = 2
+text = "Opciones"
+
+[node name="BotonMenu" type="Button" parent="Principal/Botones"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 48)
+layout_mode = 2
+text = "Menú principal"
+
+[node name="Opciones" type="CenterContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Contenido" type="VBoxContainer" parent="Opciones"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="TituloOpciones" type="Label" parent="Opciones/Contenido"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "Opciones"
+horizontal_alignment = 1
+
+[node name="LabelVolumen" type="Label" parent="Opciones/Contenido"]
+layout_mode = 2
+text = "Volumen"
+
+[node name="SliderVolumen" type="HSlider" parent="Opciones/Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LabelSensibilidad" type="Label" parent="Opciones/Contenido"]
+layout_mode = 2
+text = "Sensibilidad del mouse"
+
+[node name="SliderSensibilidad" type="HSlider" parent="Opciones/Contenido"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BotonVolver" type="Button" parent="Opciones/Contenido"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 48)
+layout_mode = 2
+text = "Volver"

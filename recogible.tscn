@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://recogible.gd" id="1_rec"]
+[ext_resource type="Script" path="res://pegar_al_suelo.gd" id="2_suelo"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_rama"]
+albedo_color = Color(0.36, 0.24, 0.13, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rama"]
+material = SubResource("Mat_rama")
+size = Vector3(0.08, 0.08, 1.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rama"]
+size = Vector3(0.4, 0.4, 1.3)
+
+[node name="RamaEspada" type="StaticBody3D"]
+script = ExtResource("1_rec")
+id_objeto = &"rama_espada"
+nombre_objeto = "Rama afilada"
+texto_prompt = "Recoger rama"
+mensaje = "Recogiste: Rama afilada"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_rama")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_rama")
+
+[node name="PegarAlSuelo" type="Node" parent="."]
+script = ExtResource("2_suelo")
+separacion = 0.1
