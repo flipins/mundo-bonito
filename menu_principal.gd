@@ -1,12 +1,8 @@
 extends Control
-## Menú principal: Nueva partida, Zona de pruebas, Opciones y Salir.
-
-## Escena que se carga con "Nueva partida" (el juego de verdad: el desierto).
 @export_file("*.tscn") var escena_juego: String = "res://desierto.tscn"
 
-## Escena que se carga con "Zona de pruebas" (tu mundo de pasto para experimentar).
 @export_file("*.tscn") var escena_pruebas: String = "res://node_3d.tscn"
-
+const Tema = preload("res://tema_pergamino.gd")
 @onready var panel_principal: Control = %Principal
 @onready var panel_opciones: Control = %Opciones
 @onready var boton_jugar: Button = %BotonJugar
@@ -20,10 +16,10 @@ var boton_pruebas: Button
 
 
 func _ready() -> void:
-	# El juego captura el mouse; en el menú lo necesitamos visible.
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Tema.estilizar_menu(self, true)
 
-	# El botón "Jugar" pasa a ser "Nueva partida", y se crea "Zona de pruebas" justo debajo.
+
 	boton_jugar.text = "Nueva partida"
 	boton_pruebas = Button.new()
 	boton_pruebas.text = "Zona de pruebas"
@@ -32,7 +28,6 @@ func _ready() -> void:
 	contenedor.add_child(boton_pruebas)
 	contenedor.move_child(boton_pruebas, boton_jugar.get_index() + 1)
 
-	# Rango de los sliders (primero min y max, después el valor).
 	slider_volumen.min_value = 0.0
 	slider_volumen.max_value = 1.0
 	slider_volumen.step = 0.05
@@ -55,7 +50,6 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Esc dentro de Opciones vuelve al menú.
 	if panel_opciones.visible and event.is_action_pressed("ui_cancel"):
 		_on_volver()
 		get_viewport().set_input_as_handled()
