@@ -5,7 +5,7 @@ extends Node
 ##  - Es un nodo suelto que se agrega como hijo de la escena del mundo (desierto.tscn).
 ##  - No toca al jugador ni se come ninguna tecla: solo mira lo que el jugador ya hace
 ##    (Input, mouse y su posición). Por eso no estorba al resto del juego ni al menú de pausa.
-##  - Los avisos salen de a uno, abajo y al centro, discretos. Cada uno se va solo cuando
+##  - Los avisos salen de a uno, a la derecha y a media altura, discretos. Cada uno se va solo cuando
 ##    el jugador cumple la acción.
 ##  - Al terminar todos se emite "tutorial_completado": ahí se engancha la escena 3 (caminata).
 
@@ -48,12 +48,14 @@ enum Estado { INACTIVO, ESPERANDO, PIDIENDO, TERMINADO }
 @export_group("Apariencia")
 ## Letra del menú (la misma de la pantalla de título). Si no existe, se usa una del sistema.
 @export_file("*.ttf", "*.otf") var archivo_fuente: String = "res://fuentes/menu.ttf"
-## Distancia desde el borde de abajo de la pantalla, en píxeles.
-@export var margen_inferior: float = 110.0
+## Distancia desde el borde derecho de la pantalla, en píxeles.
+@export var margen_derecho: float = 70.0
+## Subir o bajar el aviso respecto a la mitad de la pantalla, en píxeles (negativo = más arriba).
+@export var desplazamiento_vertical: float = 0.0
 @export var tamano_titulo: int = 30
 @export var tamano_tecla: int = 18
-## Qué tan oscuro es el degradado de abajo que ayuda a leer sobre la arena (0 = nada).
-@export_range(0.0, 1.0, 0.05) var oscurecer_abajo: float = 0.45
+## Qué tan oscuro es el degradado del lado derecho que ayuda a leer sobre la arena (0 = nada).
+@export_range(0.0, 1.0, 0.05) var oscurecer_lado: float = 0.45
 
 const COLOR_TEXTO := Color(1.0, 0.97, 0.90, 1.0)
 const COLOR_APAGADO := Color(0.93, 0.85, 0.72, 0.8)
@@ -335,38 +337,39 @@ func _crear_interfaz() -> void:
 	_aviso.modulate.a = 0.0
 	_raiz.add_child(_aviso)
 
-	# Degradado suave en la parte de abajo para que el texto se lea sobre la arena clara.
+	# Degradado suave en el lado derecho para que el texto se lea sobre la arena clara
+	# (transparente hacia el centro de la pantalla, más oscuro hacia el borde).
 	var degradado := Gradient.new()
 	degradado.set_color(0, Color(0, 0, 0, 0))
-	degradado.set_color(1, Color(0, 0, 0, oscurecer_abajo))
+	degradado.set_color(1, Color(0, 0, 0, oscurecer_lado))
 	var textura := GradientTexture2D.new()
 	textura.gradient = degradado
 	textura.fill_from = Vector2(0.0, 0.0)
-	textura.fill_to = Vector2(0.0, 1.0)
-	textura.width = 4
-	textura.height = 128
+	textura.fill_to = Vector2(1.0, 0.0)
+	textura.width = 128
+	textura.height = 4
 	var fondo := TextureRect.new()
 	fondo.texture = textura
 	fondo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	fondo.stretch_mode = TextureRect.STRETCH_SCALE
 	fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fondo.anchor_left = 0.0
+	fondo.anchor_left = 0.62
 	fondo.anchor_right = 1.0
-	fondo.anchor_top = 0.7
+	fondo.anchor_top = 0.0
 	fondo.anchor_bottom = 1.0
 	_aviso.add_child(fondo)
 
-	# Texto centrado abajo.
+	# Texto pegado al borde derecho, centrado en vertical.
 	var caja := VBoxContainer.new()
-	caja.anchor_left = 0.5
-	caja.anchor_right = 0.5
-	caja.anchor_top = 1.0
-	caja.anchor_bottom = 1.0
-	caja.offset_left = -320.0
-	caja.offset_right = 320.0
-	caja.offset_top = -(margen_inferior + 110.0)
-	caja.offset_bottom = -margen_inferior
-	caja.alignment = BoxContainer.ALIGNMENT_END
+	caja.anchor_left = 1.0
+	caja.anchor_right = 1.0
+	caja.anchor_top = 0.5
+	caja.anchor_bottom = 0.5
+	caja.offset_left = -(margen_derecho + 360.0)
+	caja.offset_right = -margen_derecho
+	caja.offset_top = desplazamiento_vertical - 60.0
+	caja.offset_bottom = desplazamiento_vertical + 60.0
+	caja.alignment = BoxContainer.ALIGNMENT_CENTER
 	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caja.add_theme_constant_override("separation", 6)
 	_aviso.add_child(caja)
@@ -380,7 +383,7 @@ func _crear_interfaz() -> void:
 	var barra_fondo := ColorRect.new()
 	barra_fondo.color = Color(1.0, 1.0, 1.0, 0.18)
 	barra_fondo.custom_minimum_size = Vector2(240.0, 3.0)
-	barra_fondo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	barra_fondo.size_flags_horizontal = Control.SIZE_SHRINK_END
 	barra_fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caja.add_child(barra_fondo)
 
@@ -396,7 +399,7 @@ func _crear_interfaz() -> void:
 
 func _crear_etiqueta(tamano: int, color: Color, fuente: Font) -> Label:
 	var etiqueta := Label.new()
-	etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	etiqueta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	etiqueta.add_theme_font_override("font", fuente)
 	etiqueta.add_theme_font_size_override("font_size", tamano)
