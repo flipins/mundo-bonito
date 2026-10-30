@@ -19,7 +19,7 @@ extends Control
 ## Letra del menú. Si este archivo no existe se usa una letra fina del sistema (Segoe UI Light).
 ## Para una letra propia: baja un .ttf fino (por ejemplo Montserrat Light o Lato Light),
 ## ponlo en una carpeta "fuentes" y cambia esta ruta.
-@export_file("*.ttf, *.otf") var archivo_fuente: String = "res://fuentes/menu.ttf"
+@export_file("*.ttf *.otf") var archivo_fuente: String = "res://fuentes/menu.ttf"
 
 const COLOR_TEXTO := Color(0.96, 0.93, 0.88, 0.92)
 const COLOR_APAGADO := Color(0.88, 0.82, 0.72, 0.55)

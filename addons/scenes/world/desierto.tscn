@@ -7,8 +7,10 @@
 [ext_resource type="Script" uid="uid://cjqbfyg6heyfw" path="res://ciclo_dia.gd" id="5_ipi4u"]
 [ext_resource type="Script" uid="uid://ddtmdmhtq80y1" path="res://scripts/player/jugador.gd" id="6_fvel5"]
 [ext_resource type="Script" uid="uid://citkucx6anhx3" path="res://scripts/player/interactor.gd" id="7_fvel5"]
+[ext_resource type="PackedScene" path="res://addons/scenes/ui/tutorial_controles.tscn" id="8_7u18c"]
 [ext_resource type="PackedScene" path="res://addons/nimblux_fx/presets/3d/rain_steady.tscn" id="8_w2cgn"]
 [ext_resource type="PackedScene" uid="uid://yglc0vybuj4v" path="res://addons/scenes/menus/menu_pausa.tscn" id="9_sd36r"]
+[ext_resource type="PackedScene" path="res://addons/scenes/world/caminata_desierto.tscn" id="9_ssux7"]
 [ext_resource type="PackedScene" path="res://addons/scenes/world/cama.tscn" id="10_4tjat"]
 [ext_resource type="PackedScene" path="res://addons/scenes/world/dunas.tscn" id="11_fkf5q"]
 [ext_resource type="PackedScene" path="res://addons/scenes/objects/recogible.tscn" id="12_cvmpl"]
@@ -136,6 +138,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4847239, 0)
 
 [node name="RayCast3D" type="RayCast3D" parent="jugador/Camera3D" unique_id=325704052]
 script = ExtResource("7_fvel5")
+
+[node name="TutorialControles" parent="jugador" unique_id=84072725 instance=ExtResource("8_7u18c")]
+
+[node name="CaminataDesierto" parent="." unique_id=819507095 node_paths=PackedStringArray("tutorial") instance=ExtResource("9_ssux7")]
+tutorial = NodePath("../jugador/TutorialControles")
 
 [node name="Rain" parent="." unique_id=1388216061 node_paths=PackedStringArray("follow_target") instance=ExtResource("8_w2cgn")]
 transform = Transform3D(0.9998477, 0, 0.017452406, 0, 1, 0, -0.017452406, 0, 0.9998477, 0, 1, 0)
