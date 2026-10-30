@@ -15,15 +15,16 @@ general/updates_per_second=100
 [application]
 
 config/name="mundo bonito"
-run/main_scene="res://fondo_menu.tscn"
+run/main_scene="res://addons/scenes/menus/pantalla_titulo.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
 Ajustes="*uid://cwtpknffue178"
 Reloj="*uid://bh1cpbhe2185y"
-Inventario="*res://inventario.gd"
+Inventario="*res://scripts/ui/inventario.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+AjustesAudio="*uid://8r6ny8r0e84x"
 
 [display]
 
@@ -35,6 +36,10 @@ window/stretch/aspect="expand"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
+
+[filesystem]
+
+import/blender/enabled=false
 
 [input]
 
@@ -88,3 +93,4 @@ agacharse={
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+textures/default_filters/anisotropic_filtering_level=4

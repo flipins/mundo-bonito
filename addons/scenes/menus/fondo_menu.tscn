@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dfygsli67dv8s"]
+
+[ext_resource type="Script" uid="uid://bis05hxyqvndp" path="res://scripts/ui/fondo_menu.gd" id="1_oemsn"]
+
+[node name="FondoMenu" type="Node3D" unique_id=373524444]
+script = ExtResource("1_oemsn")

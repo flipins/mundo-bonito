@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://o5bacl2mcug5" path="res://scripts/world/cama.gd" id="1_cama"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_cama"]
+size = Vector3(1, 0.4, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cama"]
+size = Vector3(1, 0.4, 2)
+
+[node name="Cama" type="StaticBody3D"]
+script = ExtResource("1_cama")
+texto_prompt = "Dormir"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_cama")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_cama")
