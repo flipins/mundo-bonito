@@ -18,3 +18,4 @@ texto = "Un surco enorme cruza la arena, como si algo muy grande se hubiera arra
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -110)
 texto = "Entre las ruinas, algo brilla en el suelo. Es lo único que parece seguir en pie en todo el desierto."
 es_final = true
+color_marcador = Color(1, 0.8, 0.3, 1)
