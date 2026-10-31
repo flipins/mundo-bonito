@@ -31,6 +31,15 @@ signal activada(zona: Area3D)
 ## Qué tan fuerte se ve el marcador (0 = invisible, 1 = opaco).
 @export_range(0.0, 1.0, 0.05) var intensidad_marcador: float = 0.45
 
+@export_group("Colocación en la grieta")
+## Si hay una grieta en la escena, la zona se coloca sola sobre su camino. Aquí va la fracción
+## del recorrido hasta la espada: 0 = el inicio, 0.5 = a la mitad, 1 = la cámara de la espada.
+## Con -1 la zona se queda donde la pusiste a mano.
+@export_range(-1.0, 1.0, 0.01) var fraccion_en_camino: float = -1.0
+## Alternativa: el nombre de un marcador del camino de la grieta ("Camara", "Inicio"...).
+## Si lo escribes, se usa en vez de la fracción.
+@export var marcador_del_camino: String = ""
+
 @export_group("Terreno")
 ## Al empezar el juego, baja la zona hasta apoyarla sobre el terreno (como PegarAlSuelo).
 @export var ajustar_al_terreno: bool = true
@@ -78,6 +87,9 @@ func _ready() -> void:
 	body_entered.connect(_al_entrar)
 	if mostrar_marcador_en_juego:
 		_crear_marcador()
+	# Se coloca un instante después, cuando la grieta ya está lista. El ajuste al terreno
+	# espera dos cuadros de física, así que siempre ve la posición ya corregida.
+	_colocar_en_grieta.call_deferred()
 	if ajustar_al_terreno:
 		_ajustar_al_terreno()
 
@@ -198,6 +210,25 @@ func _radio_de_la_zona() -> float:
 			if forma is CylinderShape3D:
 				return (forma as CylinderShape3D).radius
 	return 3.0
+
+
+# --- Grieta ------------------------------------------------------------------------------------
+
+func _colocar_en_grieta() -> void:
+	if fraccion_en_camino < 0.0 and marcador_del_camino.is_empty():
+		return
+	var grieta := get_tree().get_first_node_in_group(&"grieta_desierto")
+	if grieta == null:
+		return
+	var punto := Vector3.INF
+	if not marcador_del_camino.is_empty() and grieta.has_method(&"punto_de_marcador"):
+		punto = grieta.punto_de_marcador(marcador_del_camino)
+		if not punto.is_finite():
+			push_warning("ZonaHistoria '%s': la grieta no tiene un marcador llamado '%s'." % [name, marcador_del_camino])
+	elif fraccion_en_camino >= 0.0 and grieta.has_method(&"punto_en_camino"):
+		punto = grieta.punto_en_camino(fraccion_en_camino)
+	if punto.is_finite():
+		global_position = punto
 
 
 # --- Terreno -----------------------------------------------------------------------------------

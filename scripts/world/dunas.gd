@@ -4,6 +4,15 @@ extends StaticBody3D
 ## Se ve también en el editor, así puedes colocar objetos sobre él.
 ## Al cambiar cualquier valor del Inspector el terreno se regenera solo.
 ## El centro (donde aparece el jugador) es una zona plana a altura y = 0.
+##
+## Si en la escena hay una "GrietaDesierto" (ver grieta_desierto.gd), el terreno se talla
+## con la forma de la grieta: ella le dice a cada punto cuánto bajar. Sin grieta, todo
+## funciona igual que antes.
+
+const GRUPO_TERRENO := &"terreno_dunas"
+const GRUPO_GRIETA := &"grieta_desierto"
+# Color de la arena cuando se pintan colores por vértice (el mismo de la arena lisa).
+const COLOR_ARENA := Color(0.85, 0.7, 0.47)
 
 @export_group("Tamaño")
 ## Lado del terreno cuadrado, en metros.
@@ -11,8 +20,8 @@ extends StaticBody3D
 	set(valor):
 		tamano = valor
 		_regenerar_pronto()
-## Celdas por lado. Más celdas = dunas más suaves, pero más pesado.
-@export_range(20, 400, 10) var celdas: int = 200:
+## Celdas por lado. Más celdas = dunas más suaves y paredes de la grieta más finas, pero más pesado.
+@export_range(20, 600, 10) var celdas: int = 400:
 	set(valor):
 		celdas = valor
 		_regenerar_pronto()
@@ -62,7 +71,8 @@ extends StaticBody3D
 		_regenerar_pronto()
 
 @export_group("Aspecto")
-## Material del terreno. Si lo dejas vacío se usa un color de arena.
+## Material del terreno. Si lo dejas vacío se usa un color de arena
+## (y, si hay grieta, las paredes de roca se pintan solas).
 @export var material_arena: Material:
 	set(valor):
 		material_arena = valor
@@ -72,10 +82,14 @@ var _ruido: FastNoiseLite
 var _malla_nodo: MeshInstance3D
 var _colision_nodo: CollisionShape3D
 var _pendiente: bool = false
+var _grieta: Node = null
 
 
 func _ready() -> void:
-	_generar()
+	add_to_group(GRUPO_TERRENO)
+	# Se genera un instante después de que todos los nodos estén listos: así la grieta
+	# (si hay una en la escena) ya se registró y el terreno sale tallado de una sola vez.
+	_generar.call_deferred()
 
 
 func _regenerar_pronto() -> void:
@@ -87,10 +101,36 @@ func _regenerar_pronto() -> void:
 	_generar.call_deferred()
 
 
+## Vuelve a generar el terreno (la grieta lo llama cuando cambia).
+func regenerar_ahora() -> void:
+	_regenerar_pronto()
+
+
+## Dice si el terreno que hay ahora ya se talló con esta grieta.
+func usa_esta_grieta(grieta: Node) -> bool:
+	return _grieta == grieta
+
+
+## Altura de las dunas en un punto, sin tallar la grieta (espacio local del terreno).
+func altura_base(x: float, z: float) -> float:
+	if _ruido == null:
+		_configurar_ruido()
+	return _altura_dunas(x, z)
+
+
 func _generar() -> void:
 	_pendiente = false
+	if not is_inside_tree():
+		return
 	_asegurar_nodos()
 	_configurar_ruido()
+
+	# Una grieta es opcional: si existe, se prepara con la posición actual del terreno.
+	_grieta = get_tree().get_first_node_in_group(GRUPO_GRIETA)
+	if _grieta != null and not _grieta.has_method(&"altura_con_grieta"):
+		_grieta = null
+	if _grieta != null:
+		_grieta.preparar(self)
 
 	var n: int = celdas + 1
 	var paso: float = tamano / float(celdas)
@@ -99,19 +139,30 @@ func _generar() -> void:
 	# 1) Altura de cada vértice de la cuadrícula.
 	var alturas := PackedFloat32Array()
 	alturas.resize(n * n)
+	var bases := PackedFloat32Array()
+	if _grieta != null:
+		bases.resize(n * n)
 	for i in range(n):
 		for j in range(n):
 			var x: float = origen + float(j) * paso
 			var z: float = origen + float(i) * paso
-			alturas[i * n + j] = _altura(x, z)
+			var base: float = _altura_dunas(x, z)
+			if _grieta != null:
+				bases[i * n + j] = base
+				alturas[i * n + j] = _grieta.altura_con_grieta(x, z, base)
+			else:
+				alturas[i * n + j] = base
 
 	# 2) Vértices, normales y coordenadas de textura.
 	var vertices := PackedVector3Array()
 	var normales := PackedVector3Array()
 	var uvs := PackedVector2Array()
+	var colores := PackedColorArray()
 	vertices.resize(n * n)
 	normales.resize(n * n)
 	uvs.resize(n * n)
+	if _grieta != null:
+		colores.resize(n * n)
 	for i in range(n):
 		var i0: int = maxi(i - 1, 0)
 		var i1: int = mini(i + 1, n - 1)
@@ -126,6 +177,9 @@ func _generar() -> void:
 			var dhdz: float = (alturas[i1 * n + j] - alturas[i0 * n + j]) / (float(i1 - i0) * paso)
 			normales[idx] = Vector3(-dhdx, 1.0, -dhdz).normalized()
 			uvs[idx] = Vector2(x, z) / 10.0
+			if _grieta != null:
+				# Roca en las paredes de la grieta, arena en el resto.
+				colores[idx] = _grieta.color_vertice(x, z, alturas[idx], bases[idx], normales[idx].y)
 
 	# 3) Triángulos. Godot considera "frente" el sentido de las agujas del reloj.
 	var indices := PackedInt32Array()
@@ -150,6 +204,8 @@ func _generar() -> void:
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normales
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	if _grieta != null:
+		arrays[Mesh.ARRAY_COLOR] = colores
 	arrays[Mesh.ARRAY_INDEX] = indices
 
 	var malla := ArrayMesh.new()
@@ -164,7 +220,8 @@ func _generar() -> void:
 		_colision_nodo.shape = forma
 
 
-func _altura(x: float, z: float) -> float:
+# Altura de las dunas, sin grieta.
+func _altura_dunas(x: float, z: float) -> float:
 	# Se gira el plano para alargar las dunas en la dirección del viento.
 	var ang: float = deg_to_rad(direccion_viento)
 	var u: float = x * cos(ang) + z * sin(ang)
@@ -209,6 +266,12 @@ func _obtener_material() -> Material:
 	if material_arena != null:
 		return material_arena
 	var arena := StandardMaterial3D.new()
-	arena.albedo_color = Color(0.85, 0.7, 0.47)
 	arena.roughness = 1.0
+	if _grieta != null:
+		# Con grieta, el color viene de cada vértice (arena y roca).
+		arena.albedo_color = Color.WHITE
+		arena.vertex_color_use_as_albedo = true
+		arena.vertex_color_is_srgb = true
+	else:
+		arena.albedo_color = COLOR_ARENA
 	return arena

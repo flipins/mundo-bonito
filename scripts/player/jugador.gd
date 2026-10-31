@@ -129,6 +129,18 @@ func _physics_process(delta):
 		_calcular_distancia_libre()
 
 
+## Coloca al jugador en un punto del mundo mirando hacia un ángulo (0 = hacia -Z, como al empezar).
+## En tercera persona la cámara queda detrás de golpe, sin viaje ni suavizado.
+func teletransportar(posicion: Vector3, giro: float) -> void:
+	global_position = posicion
+	velocity = Vector3.ZERO
+	rotation.y = giro
+	if tercera_persona:
+		_yaw = giro
+		_pivote = global_position + Vector3(0.0, _altura_pivote, 0.0)
+		_actualizar_camara(0.0, true)
+
+
 # --- Cámara en tercera persona -----------------------------------------------------------------
 
 func _preparar_tercera_persona() -> void:
