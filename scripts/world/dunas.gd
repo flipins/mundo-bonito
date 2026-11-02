@@ -13,6 +13,13 @@ const GRUPO_TERRENO := &"terreno_dunas"
 const GRUPO_GRIETA := &"grieta_desierto"
 # Color de la arena cuando se pintan colores por vértice (el mismo de la arena lisa).
 const COLOR_ARENA := Color(0.85, 0.7, 0.47)
+# Texturas de arena: las mismas que usa la pantalla de título.
+const RUTA_ARENA_COLOR := "res://assets/texturas/arena/Ground093A_1K-JPG_Color.jpg"
+const RUTA_ARENA_NORMAL := "res://assets/texturas/arena/Ground093A_1K-JPG_NormalGL.jpg"
+const RUTA_ARENA_ROUGH := "res://assets/texturas/arena/Ground093A_1K-JPG_Roughness.jpg"
+
+# Texturas ya preparadas (con mipmaps), compartidas por todos los terrenos.
+static var _texturas_cache: Dictionary = {}
 
 @export_group("Tamaño")
 ## Lado del terreno cuadrado, en metros.
@@ -71,11 +78,22 @@ const COLOR_ARENA := Color(0.85, 0.7, 0.47)
 		_regenerar_pronto()
 
 @export_group("Aspecto")
-## Material del terreno. Si lo dejas vacío se usa un color de arena
-## (y, si hay grieta, las paredes de roca se pintan solas).
+## Material del terreno. Si lo dejas vacío se usa la arena con texturas (o, si apagas
+## "Usar Texturas Arena", un color liso). Con grieta, las paredes de roca se pintan solas.
 @export var material_arena: Material:
 	set(valor):
 		material_arena = valor
+		_regenerar_pronto()
+## Pone las texturas de arena de la pantalla de título al terreno cuando no hay material propio.
+@export var usar_texturas_arena: bool = true:
+	set(valor):
+		usar_texturas_arena = valor
+		_regenerar_pronto()
+## Cuántas veces se repite la textura por metro. 0.5 = una repetición cada 2 metros
+## (más alto = grano más fino; más bajo = grano más grande).
+@export_range(0.05, 3.0, 0.05) var escala_textura: float = 0.5:
+	set(valor):
+		escala_textura = valor
 		_regenerar_pronto()
 
 var _ruido: FastNoiseLite
@@ -154,6 +172,8 @@ func _generar() -> void:
 				alturas[i * n + j] = base
 
 	# 2) Vértices, normales y coordenadas de textura.
+	# Con texturas, el color del vértice solo "tiñe" la textura (blanco = arena sin cambios).
+	var con_textura: bool = _usa_textura()
 	var vertices := PackedVector3Array()
 	var normales := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -179,7 +199,8 @@ func _generar() -> void:
 			uvs[idx] = Vector2(x, z) / 10.0
 			if _grieta != null:
 				# Roca en las paredes de la grieta, arena en el resto.
-				colores[idx] = _grieta.color_vertice(x, z, alturas[idx], bases[idx], normales[idx].y)
+				var color: Color = _grieta.color_vertice(x, z, alturas[idx], bases[idx], normales[idx].y)
+				colores[idx] = _como_tinte(color) if con_textura else color
 
 	# 3) Triángulos. Godot considera "frente" el sentido de las agujas del reloj.
 	var indices := PackedInt32Array()
@@ -262,9 +283,66 @@ func _asegurar_nodos() -> void:
 		add_child(_colision_nodo)
 
 
+# ¿Se va a usar la arena con texturas? (solo si no hay material propio y las texturas existen)
+func _usa_textura() -> bool:
+	return material_arena == null and usar_texturas_arena and ResourceLoader.exists(RUTA_ARENA_COLOR)
+
+
+# Convierte un color de arena/roca en un tinte para la textura: la arena lisa pasa a blanco,
+# la roca y el fondo oscuro de la grieta quedan más oscuros que la arena, en la misma proporción.
+func _como_tinte(color: Color) -> Color:
+	return Color(
+			minf(color.r / COLOR_ARENA.r, 1.0),
+			minf(color.g / COLOR_ARENA.g, 1.0),
+			minf(color.b / COLOR_ARENA.b, 1.0),
+			1.0)
+
+
+# Arena con las texturas de la pantalla de título: color, relieve y brillo, repetidas sobre
+# el mundo (triplanar) para que no se estiren en las paredes de la grieta.
+func _material_con_texturas() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = _textura(RUTA_ARENA_COLOR, false)
+	material.albedo_color = Color.WHITE
+	material.roughness = 0.95
+	material.uv1_triplanar = true
+	material.uv1_world_triplanar = true
+	material.uv1_scale = Vector3.ONE * escala_textura
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	if ResourceLoader.exists(RUTA_ARENA_NORMAL):
+		material.normal_enabled = true
+		material.normal_texture = _textura(RUTA_ARENA_NORMAL, true)
+		material.normal_scale = 1.0
+	if ResourceLoader.exists(RUTA_ARENA_ROUGH):
+		material.roughness_texture = _textura(RUTA_ARENA_ROUGH, false)
+	if _grieta != null:
+		# El color de cada vértice oscurece la textura en las paredes de roca.
+		material.vertex_color_use_as_albedo = true
+		material.vertex_color_is_srgb = true
+	return material
+
+
+# Carga una textura y, si viene sin mipmaps, se los genera: sin ellos la arena lejana
+# "brilla" y se ve con ruido al caminar. Se guarda para no repetir el trabajo.
+func _textura(ruta: String, es_normal: bool) -> Texture2D:
+	if _texturas_cache.has(ruta):
+		return _texturas_cache[ruta]
+	var original := load(ruta) as Texture2D
+	var resultado: Texture2D = original
+	if original != null:
+		var imagen: Image = original.get_image()
+		if imagen != null and not imagen.is_empty() and not imagen.is_compressed() and not imagen.has_mipmaps():
+			imagen.generate_mipmaps(es_normal)
+			resultado = ImageTexture.create_from_image(imagen)
+	_texturas_cache[ruta] = resultado
+	return resultado
+
+
 func _obtener_material() -> Material:
 	if material_arena != null:
 		return material_arena
+	if _usa_textura():
+		return _material_con_texturas()
 	var arena := StandardMaterial3D.new()
 	arena.roughness = 1.0
 	if _grieta != null:
