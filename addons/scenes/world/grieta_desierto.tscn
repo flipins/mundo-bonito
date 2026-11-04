@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://b42drruhsemno"]
+
+[ext_resource type="Script" uid="uid://blrr3vpq55jwk" path="res://scripts/world/grieta_desierto.gd" id="1_grieta"]
+
+[node name="GrietaDesierto" type="Node3D" unique_id=1094124407]
+script = ExtResource("1_grieta")
+ancho = 8.0
+ancho_escaleras = 6.0
+ancho_pared = 4.0
+radio_camara = 11.0
+crear_obstaculos = null
+cantidad_tablas = null
+altura_tabla = null
+grosor_tablas = null
+hueco_tablas = null
+cantidad_tablas_salto = null
+altura_pasaje = null
+altura_muro = null
+distancia_aviso = null
+irregularidad_roca = null
+detalle_roca = null
+
+[node name="Camino" type="Node3D" parent="." unique_id=295075001]
+
+[node name="Inicio" type="Marker3D" parent="Camino" unique_id=1559895363]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -8, 172)
+gizmo_extents = 3.0
+
+[node name="Curva1" type="Marker3D" parent="Camino" unique_id=93684024]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, -8, 152)
+gizmo_extents = 3.0
+
+[node name="Curva2" type="Marker3D" parent="Camino" unique_id=1891834287]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, -8, 138)
+gizmo_extents = 3.0
+
+[node name="Curva3" type="Marker3D" parent="Camino" unique_id=1553481469]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45, -8, 112)
+gizmo_extents = 3.0
+
+[node name="Curva4" type="Marker3D" parent="Camino" unique_id=1547740707]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, -8, 92)
+gizmo_extents = 3.0
+
+[node name="Curva5" type="Marker3D" parent="Camino" unique_id=216180252]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, -8, 80)
+gizmo_extents = 3.0
+
+[node name="Curva6" type="Marker3D" parent="Camino" unique_id=99564396]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, -8, 62)
+gizmo_extents = 3.0
+
+[node name="Curva7" type="Marker3D" parent="Camino" unique_id=971738575]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, -8, 50)
+gizmo_extents = 3.0
+
+[node name="Camara" type="Marker3D" parent="Camino" unique_id=233451181]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, -8, 44)
+gizmo_extents = 3.0
+
+[node name="EscalerasInicio" type="Marker3D" parent="Camino" unique_id=1250915677]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -8, 33)
+gizmo_extents = 3.0
+
+[node name="Cima" type="Marker3D" parent="Camino" unique_id=1739800108]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 13)
+gizmo_extents = 3.0

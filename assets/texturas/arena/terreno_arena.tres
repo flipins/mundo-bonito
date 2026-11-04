@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://cqd1qv0m6pkue"]
+
+[ext_resource type="Shader" uid="uid://dmxk0dg8lydf2" path="res://assets/shadders/terreno_arena.gdshader.gdshader" id="1_xexys"]
+[ext_resource type="Texture2D" uid="uid://brgxqhquyeo0" path="res://assets/texturas/arena/Ground093A_1K-JPG_Color.jpg" id="2_c6nti"]
+[ext_resource type="Texture2D" uid="uid://byo2tjwgprlg7" path="res://assets/texturas/arena/Ground093A_1K-JPG_NormalGL.jpg" id="3_i0lof"]
+[ext_resource type="Texture2D" uid="uid://bi5rbm7c3iam5" path="res://assets/texturas/arena/Ground093A_1K-JPG_Roughness.jpg" id="4_b5sh3"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_xexys")
+shader_parameter/arena_color = ExtResource("2_c6nti")
+shader_parameter/arena_normal = ExtResource("3_i0lof")
+shader_parameter/arena_rugosidad = ExtResource("4_b5sh3")
+shader_parameter/tamano_textura = 4.0
+shader_parameter/fuerza_relieve = 1.0
+shader_parameter/sentido_relieve = 1.0
+shader_parameter/tinte = Color(0.9098039, 0.7882353, 0.6039216, 1)
+shader_parameter/roca_color = ExtResource("2_c6nti")
+shader_parameter/roca_normal = ExtResource("3_i0lof")
+shader_parameter/roca_rugosidad = ExtResource("4_b5sh3")
+shader_parameter/tamano_roca = 6.0
+shader_parameter/fuerza_relieve_roca = 1.0
+shader_parameter/mezcla_color_vetas = 0.5
+shader_parameter/roca_desde = 0.03
+shader_parameter/roca_hasta = 0.3

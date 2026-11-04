@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://dbx64apgbk400"]
+
+[ext_resource type="Script" uid="uid://bahocpaq4cye1" path="res://scripts/world/caminata_desierto.gd" id="1_cam"]
+[ext_resource type="PackedScene" path="res://addons/scenes/world/zona_historia.tscn" id="2_zona"]
+
+[node name="CaminataDesierto" type="Node3D" unique_id=1847752505]
+script = ExtResource("1_cam")
+
+[node name="HallazgoEnterrado" parent="." unique_id=648892284 instance=ExtResource("2_zona")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -30)
+texto = "Algo asoma entre la arena, casi enterrado. Parece que alguien pasó por aquí hace mucho tiempo."
+
+[node name="SurcoGigante" parent="." unique_id=216210459 instance=ExtResource("2_zona")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -70)
+texto = "Un surco enorme cruza la arena, como si algo muy grande se hubiera arrastrado por aquí."
+
+[node name="RuinasFinal" parent="." unique_id=995753308 instance=ExtResource("2_zona")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -110)
+texto = "Entre las ruinas, algo brilla en el suelo. Es lo único que parece seguir en pie en todo el desierto."
+es_final = true
+color_marcador = Color(1, 0.8, 0.3, 1)

@@ -7,6 +7,8 @@ extends Node
 ##    (Input, mouse y su posición). Por eso no estorba al resto del juego ni al menú de pausa.
 ##  - Los avisos salen de a uno, a la derecha y a media altura, discretos. Cada uno se va solo cuando
 ##    el jugador cumple la acción.
+##  - "Agáchate" y "Salta" no salen de corrido: esperan a que el jugador se acerque al primer
+##    obstáculo de ese tipo en la grieta (señal obstaculo_cercano de GrietaDesierto).
 ##  - Al terminar todos se emite "tutorial_completado": ahí se engancha la escena 3 (caminata).
 
 ## Se emite cada vez que el jugador cumple un aviso ("camara", "mover", "correr", ...).
@@ -40,8 +42,8 @@ enum Estado { INACTIVO, ESPERANDO, PIDIENDO, TERMINADO }
 @export var metros_a_caminar: float = 4.0
 ## Segundos corriendo de verdad (con Shift y moviéndose a velocidad de carrera).
 @export var segundos_corriendo: float = 1.5
-## Segundos agachado.
-@export var segundos_agachado: float = 0.7
+## Segundos agachado. Con un techo bajo de por medio, cruzarlo agachado lleva más o menos medio segundo.
+@export var segundos_agachado: float = 0.5
 ## Velocidad horizontal desde la que se considera que corre (caminar = 5, correr = 9 en jugador.gd).
 @export var velocidad_minima_correr: float = 6.5
 
@@ -62,6 +64,7 @@ const COLOR_APAGADO := Color(0.93, 0.85, 0.72, 0.8)
 const ACCION_CORRER := &"correr"
 const ACCION_AGACHARSE := &"agacharse"
 const ACCION_SALTO := &"ui_accept"
+const GRUPO_GRIETA := &"grieta_desierto"
 
 var _estado: Estado = Estado.INACTIVO
 var _pasos: Array[int] = []
@@ -75,6 +78,10 @@ var _mouse_acumulado: float = 0.0
 var _distancia: float = 0.0
 var _tiempo: float = 0.0
 var _ultima_posicion: Vector3 = Vector3.ZERO
+
+# Obstáculos de la grieta: agacharse y saltar esperan a que el jugador se acerque a uno.
+var _grieta: Node = null
+var _obstaculos_vistos: Dictionary = {}
 
 # Interfaz (se construye por código, como el resto de los menús).
 var _capa: CanvasLayer
@@ -91,6 +98,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_buscar_jugador()
 	_crear_interfaz()
+	_conectar_grieta.call_deferred()
 	if jugador == null:
 		push_error("TutorialControles: no se encontró el nodo 'jugador'. Asígnalo en el Inspector (propiedad Jugador).")
 		return
@@ -160,12 +168,18 @@ func _process(delta: float) -> void:
 # --- Flujo de avisos -------------------------------------------------------------------------
 
 func _mostrar_siguiente() -> void:
-	_indice += 1
-	if _indice >= _pasos.size():
+	if _indice + 1 >= _pasos.size():
 		_terminar()
 		return
 
-	var paso: int = _pasos[_indice]
+	var paso: int = _pasos[_indice + 1]
+	# Agacharse y saltar esperan a que el jugador se acerque al obstáculo que los pide.
+	# Mientras tanto el tutorial queda en espera y vuelve a intentarlo en cada cuadro.
+	var tipo: StringName = _tipo_obstaculo(paso)
+	if _grieta != null and tipo != &"" and not _obstaculos_vistos.get(tipo, false):
+		return
+	_indice += 1
+
 	_mouse_acumulado = 0.0
 	_distancia = 0.0
 	_tiempo = 0.0
@@ -233,6 +247,33 @@ func _mostrar_aviso(entrar: bool, retraso: float = 0.0) -> void:
 	_tween.tween_property(_aviso, "modulate:a", 1.0 if entrar else 0.0, 0.6 if entrar else 0.5)
 
 
+# --- Obstáculos de la grieta ------------------------------------------------------------------
+
+func _conectar_grieta() -> void:
+	var g: Node = get_tree().get_first_node_in_group(GRUPO_GRIETA)
+	if g == null or not g.has_signal(&"obstaculo_cercano"):
+		return
+	# Si los obstáculos están apagados, el tutorial pide todo seguido como antes.
+	if not g.get(&"crear_obstaculos"):
+		return
+	_grieta = g
+	g.connect(&"obstaculo_cercano", _al_obstaculo_cercano)
+
+
+func _al_obstaculo_cercano(tipo: StringName) -> void:
+	_obstaculos_vistos[tipo] = true
+
+
+# Qué tipo de obstáculo hace falta ver antes de pedir este paso ("" = ninguno).
+func _tipo_obstaculo(paso: int) -> StringName:
+	match paso:
+		Paso.AGACHARSE:
+			return &"agacharse"
+		Paso.SALTAR:
+			return &"saltar"
+	return &""
+
+
 # --- Textos y teclas --------------------------------------------------------------------------
 
 func _textos_del_paso(paso: int) -> PackedStringArray:
@@ -244,7 +285,7 @@ func _textos_del_paso(paso: int) -> PackedStringArray:
 		Paso.CORRER:
 			return PackedStringArray(["Corre", "Mantén %s mientras caminas" % _nombre_tecla(ACCION_CORRER)])
 		Paso.AGACHARSE:
-			return PackedStringArray(["Agáchate", "Mantén %s" % _nombre_tecla(ACCION_AGACHARSE)])
+			return PackedStringArray(["Agáchate", "Mantén %s para pasar" % _nombre_tecla(ACCION_AGACHARSE)])
 		Paso.SALTAR:
 			var tecla_salto := "Espacio" if _accion_usa_tecla(ACCION_SALTO, KEY_SPACE) else _nombre_tecla(ACCION_SALTO)
 			return PackedStringArray(["Salta", tecla_salto])

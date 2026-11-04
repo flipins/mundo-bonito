@@ -5,6 +5,8 @@ extends Node3D
 ##  - Es un nodo que contiene las zonas de historia (ZonaHistoria) como hijos, a lo largo del
 ##    camino lineal que cierran las montañas.
 ##  - Cuando el tutorial de controles termina ("tutorial_completado"), arma todas las zonas.
+##  - Cada zona dibuja un haz de luz visible de lejos; por defecto solo se ve el de la siguiente
+##    zona del camino, para guiar al jugador sin que se pierda.
 ##  - Cada vez que el jugador pisa una, muestra su texto abajo y al centro, como subtítulo.
 ##  - La zona marcada como "es_final" (junto a la espada) emite "llego_a_la_espada":
 ##    ahí se engancha la escena 4.
@@ -23,6 +25,10 @@ signal llego_a_la_espada
 @export var tutorial: Node
 ## Segundos que espera, tras terminar el tutorial, antes de activar las zonas.
 @export var retraso_tras_tutorial: float = 1.0
+## Muestra solo el marcador (haz de luz) de la siguiente zona, así el jugador sabe adónde ir sin
+## llenar el desierto de luces. Las zonas se siguen en el orden del árbol de nodos.
+## Desactívalo para ver todos los marcadores a la vez.
+@export var solo_la_siguiente: bool = true
 
 @export_group("Textos")
 ## Segundos mínimos que se queda un texto en pantalla.
@@ -76,6 +82,18 @@ func iniciar() -> void:
 		await get_tree().create_timer(retraso_tras_tutorial, false).timeout
 	for zona in _zonas:
 		zona.call(&"armar")
+	_actualizar_marcadores()
+
+
+# Enciende el marcador de la próxima zona sin descubrir y apaga los de las ya descubiertas.
+func _actualizar_marcadores() -> void:
+	var ya_hay_uno: bool = false
+	for zona in _zonas:
+		var descubierta: bool = zona.call(&"fue_usada")
+		var mostrar: bool = not descubierta and (not solo_la_siguiente or not ya_hay_uno)
+		if mostrar:
+			ya_hay_uno = true
+		zona.call(&"mostrar_marcador", mostrar)
 
 
 func _recoger_zonas() -> void:
@@ -102,6 +120,7 @@ func _conectar_tutorial() -> void:
 
 func _al_activar_zona(zona: Area3D) -> void:
 	zona_descubierta.emit(zona)
+	_actualizar_marcadores()
 	var texto := str(zona.get(&"texto")).strip_edges()
 	if texto != "":
 		_encolar(texto)

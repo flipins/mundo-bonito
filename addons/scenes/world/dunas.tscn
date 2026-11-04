@@ -1,6 +1,8 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c042vj0r2uuov"]
 
-[ext_resource type="Script" uid="uid://bcko4jf620s2a" path="res://scripts/world/dunas.gd" id="1_dunas"]
+[ext_resource type="Script" uid="uid://c64uucvo73i6e" path="res://scripts/world/dunas.gd" id="1_dunas"]
+[ext_resource type="Material" uid="uid://cqd1qv0m6pkue" path="res://assets/texturas/arena/terreno_arena.tres" id="2_c46ok"]
 
-[node name="Dunas" type="StaticBody3D"]
+[node name="Dunas" type="StaticBody3D" unique_id=1297567766]
 script = ExtResource("1_dunas")
+material_arena = ExtResource("2_c46ok")

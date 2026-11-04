@@ -9,12 +9,18 @@ script = ExtResource("1_cam")
 [node name="HallazgoEnterrado" parent="." instance=ExtResource("2_zona")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -30)
 texto = "Algo asoma entre la arena, casi enterrado. Parece que alguien pasó por aquí hace mucho tiempo."
+mostrar_marcador_en_juego = false
+fraccion_en_camino = 0.22
 
 [node name="SurcoGigante" parent="." instance=ExtResource("2_zona")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -70)
-texto = "Un surco enorme cruza la arena, como si algo muy grande se hubiera arrastrado por aquí."
+texto = "Un surco enorme cruza el suelo de la grieta, como si algo muy grande se hubiera arrastrado por aquí."
+mostrar_marcador_en_juego = false
+fraccion_en_camino = 0.55
 
 [node name="RuinasFinal" parent="." instance=ExtResource("2_zona")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -110)
-texto = "Entre las ruinas, algo brilla en el suelo. Es lo único que parece seguir en pie en todo el desierto."
+texto = "Una espada está clavada en la roca, en el centro de la grieta. Nadie parece haberla tocado en mucho tiempo."
 es_final = true
+color_marcador = Color(1, 0.8, 0.3, 1)
+marcador_del_camino = "Camara"
