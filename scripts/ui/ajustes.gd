@@ -1,8 +1,10 @@
 extends Node
 ## Ajustes globales del juego (se registra como Autoload con el nombre "Ajustes").
 ## Guarda y carga el volumen y la sensibilidad del mouse en un archivo del usuario.
+## También crea el nodo de rendimiento (FPS y opciones gráficas), disponible como Ajustes.rendimiento.
 
 const RUTA_ARCHIVO := "user://ajustes.cfg"
+const RendimientoScript := preload("res://scripts/ui/rendimiento.gd")
 
 ## Volumen general, de 0.0 (silencio) a 1.0 (máximo).
 var volumen: float = 1.0
@@ -10,10 +12,16 @@ var volumen: float = 1.0
 ## Multiplicador de sensibilidad del mouse. 1.0 = la sensibilidad normal del jugador.
 var sensibilidad: float = 1.0
 
+## Opciones de rendimiento y contador de FPS (ver rendimiento.gd). Se crea en _ready().
+var rendimiento: Variant = null
+
 
 func _ready() -> void:
 	cargar()
 	aplicar_volumen()
+	rendimiento = RendimientoScript.new()
+	rendimiento.name = "Rendimiento"
+	add_child(rendimiento)
 
 
 func aplicar_volumen() -> void:

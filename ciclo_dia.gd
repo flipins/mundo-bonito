@@ -56,6 +56,8 @@ var _entorno: Environment = null
 var _material_cielo: ShaderMaterial = null
 var _sol: DirectionalLight3D = null
 var _luna: DirectionalLight3D = null
+# Opciones de rendimiento (Ajustes.rendimiento); de aquí solo se lee si las sombras están activadas.
+var _rend: Variant = null
  
 # Valores de día, tal como están en tu escena.
 var _sol_energia: float = 1.0
@@ -87,6 +89,9 @@ func _ready() -> void:
 	else:
 		_rng.randomize()
 	_buscar_escena()
+	var ajustes: Node = get_node_or_null("/root/Ajustes")
+	if ajustes != null:
+		_rend = ajustes.get("rendimiento")
 	_reloj = get_node_or_null("/root/Reloj")
 	if _reloj == null:
 		push_warning("ciclo_dia.gd: no se encontró el Autoload 'Reloj'.")
@@ -181,12 +186,17 @@ func _crear_luna(raiz: Node) -> void:
  
 # --- Sol, luna y entorno -----------------------------------------------------------------------
  
+# Las sombras se pueden apagar desde Ajustes > Rendimiento.
+func _sombras_activas() -> bool:
+	return _rend == null or bool(_rend.sombras)
+
+
 func _actualizar_sol(altura: float) -> void:
 	# La luz del sol se desvanece al llegar al horizonte, sin que "salte" al anochecer.
 	var visible_sol: float = smoothstep(-0.04, 0.12, altura)
 	# Nunca llega a 0 exacto: así el cielo siempre sigue encontrando al sol.
 	_sol.light_energy = maxf(_sol_energia * visible_sol, 0.0005)
-	_sol.shadow_enabled = visible_sol > 0.02
+	_sol.shadow_enabled = visible_sol > 0.02 and _sombras_activas()
  
 	if sol_anaranjado_en_horizonte:
 		var calido: float = smoothstep(0.02, 0.45, altura)
@@ -204,6 +214,7 @@ func _actualizar_luna(hacia_el_sol: Vector3, altura: float) -> void:
 	_luna.light_color = color_luna
 	_luna.light_energy = energia
 	_luna.visible = energia > 0.001
+	_luna.shadow_enabled = _sombras_activas()
 	if not _luna.visible:
 		return
 	# La luz viaja desde la luna hacia el suelo, o sea, en la misma dirección que "hacia el sol".

@@ -28,6 +28,9 @@ var _slider_volumen: HSlider
 var _slider_ambiente: HSlider
 var _slider_efectos: HSlider
 var _slider_sensibilidad: HSlider
+var _lista_rendimiento: VBoxContainer
+var _primer_boton_rendimiento: Button
+var _botones_rendimiento: Dictionary = {}
 var _cortina: ColorRect
 var _fuente_titulo: Font
 var _fuente_item: Font
@@ -80,7 +83,12 @@ func _sonido_click() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Esc dentro de Ajustes vuelve al menú.
-	if _lista_ajustes.visible and event.is_action_pressed("ui_cancel"):
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	if _lista_rendimiento.visible:
+		_on_volver_rendimiento()
+		get_viewport().set_input_as_handled()
+	elif _lista_ajustes.visible:
 		_on_volver()
 		get_viewport().set_input_as_handled()
 
@@ -156,6 +164,7 @@ func _crear_interfaz() -> void:
 	_agregar_boton(_lista_principal, "Salir", _on_salir)
 
 	_crear_ajustes(columna)
+	_crear_rendimiento(columna)
 
 	# Cortina negra encima de todo, para entrar y salir con un fundido.
 	_cortina = ColorRect.new()
@@ -202,6 +211,7 @@ func _crear_ajustes(columna: Control) -> void:
 	_lista_ajustes.add_child(_slider_sensibilidad)
 
 	_lista_ajustes.add_child(_crear_espacio(18.0))
+	_agregar_boton(_lista_ajustes, "Rendimiento", _mostrar_rendimiento)
 	_agregar_boton(_lista_ajustes, "Volver", _on_volver)
 
 
@@ -393,3 +403,59 @@ func _on_efectos_soltado(_cambio: bool) -> void:
 
 func _on_sensibilidad_cambiada(valor: float) -> void:
 	Ajustes.sensibilidad = valor
+
+
+# ---------------------------------------------------------------- Rendimiento
+
+# Pantalla con el contador de FPS y las opciones gráficas (la lógica está en rendimiento.gd).
+# Cada opción es un botón: al pulsarlo cambia al siguiente valor y el texto se actualiza.
+func _crear_rendimiento(columna: Control) -> void:
+	_lista_rendimiento = VBoxContainer.new()
+	_lista_rendimiento.add_theme_constant_override("separation", 6)
+	_lista_rendimiento.visible = false
+	columna.add_child(_lista_rendimiento)
+
+	_lista_rendimiento.add_child(_crear_etiqueta("RENDIMIENTO", 34, COLOR_TEXTO, _fuente_item))
+	_lista_rendimiento.add_child(_crear_espacio(10.0))
+
+	var rend: Variant = Ajustes.rendimiento
+	for opcion: Dictionary in rend.opciones():
+		var id: StringName = opcion["id"]
+		var boton := _agregar_boton(_lista_rendimiento, rend.texto(id), _sin_accion)
+		boton.pressed.connect(_alternar_rendimiento.bind(id))
+		_botones_rendimiento[id] = boton
+		if _primer_boton_rendimiento == null:
+			_primer_boton_rendimiento = boton
+
+	_lista_rendimiento.add_child(_crear_espacio(18.0))
+	_agregar_boton(_lista_rendimiento, "Volver", _on_volver_rendimiento)
+
+
+func _sin_accion() -> void:
+	pass
+
+
+func _alternar_rendimiento(id: StringName) -> void:
+	Ajustes.rendimiento.alternar(id)
+	_refrescar_rendimiento()
+
+
+# Pone en cada botón el valor actual (por ejemplo si el contador se encendió con F3).
+func _refrescar_rendimiento() -> void:
+	var rend: Variant = Ajustes.rendimiento
+	for id in _botones_rendimiento:
+		var boton: Button = _botones_rendimiento[id]
+		boton.text = String(rend.texto(id)).to_upper()
+
+
+func _mostrar_rendimiento() -> void:
+	_lista_ajustes.hide()
+	_refrescar_rendimiento()
+	_lista_rendimiento.show()
+	_primer_boton_rendimiento.grab_focus()
+
+
+func _on_volver_rendimiento() -> void:
+	_lista_rendimiento.hide()
+	_lista_ajustes.show()
+	_slider_volumen.grab_focus()

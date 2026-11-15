@@ -9,11 +9,11 @@ signal murio
 @export var vida_maxima: int = 1000
 @export_group("Aspecto")
 @export var ancho: float = 420.0
-@export var alto: float = 22.0
+@export var alto: float = 12.5
 ## Distancia desde el borde inferior de la pantalla hasta la barra.
 @export var margen_inferior: float = 60.0
-@export var tamano_texto: int = 14
-@export var color_vida: Color = Color(0.55, 0.88, 0.25)
+@export var tamano_texto: int = 10
+@export var color_vida: Color = Color(0.43, 0.689, 0.2, 1.0)
 @export var color_fondo: Color = Color(0.0, 0.0, 0.0, 0.55)
 ## Qué tan rápido se mueve la barra al cambiar la vida (más alto = más rápido).
 @export_range(1.0, 20.0, 0.5) var suavizado: float = 8.0
@@ -79,12 +79,12 @@ func _crear_interfaz() -> void:
 	_barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_barra.max_value = vida_maxima
 	_barra.value = vida
-	_barra.anchor_left = 0.5
+	_barra.anchor_left = 0.8
 	_barra.anchor_right = 0.5
-	_barra.anchor_top = 1.0
-	_barra.anchor_bottom = 1.0
-	_barra.offset_left = -ancho * 0.5
-	_barra.offset_right = ancho * 0.5
+	_barra.anchor_top = 1
+	_barra.anchor_bottom = 1
+	_barra.offset_left = -ancho * 0.6
+	_barra.offset_right = ancho * 0.6
 	_barra.offset_top = -(margen_inferior + alto)
 	_barra.offset_bottom = -margen_inferior
 	_barra.add_theme_stylebox_override("background", _estilo(color_fondo))
@@ -99,13 +99,13 @@ func _crear_interfaz() -> void:
 	_texto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_texto.add_theme_font_size_override("font_size", tamano_texto)
 	_texto.add_theme_constant_override("outline_size", 4)
-	_texto.add_theme_color_override("font_outline_color", Color.BLACK)
+	_texto.add_theme_color_override("font_outline_color", Color.ANTIQUE_WHITE)
 	_barra.add_child(_texto)
  
  
 func _estilo(color: Color) -> StyleBoxFlat:
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = color
-	estilo.set_corner_radius_all(int(alto * 0.3))
+	estilo.set_corner_radius_all(int(alto * 0.7))
 	return estilo
  

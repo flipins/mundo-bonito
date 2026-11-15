@@ -216,7 +216,9 @@ func _avanzar_paso(delta: float) -> void:
 				_tiempo += delta
 			_progreso = _tiempo / segundos_agachado
 		Paso.SALTAR:
-			if Input.is_action_just_pressed(ACCION_SALTO) and jugador.is_on_floor():
+			# El jugador ya despegó en este mismo cuadro (su física corre antes que _process),
+			# así que is_on_floor() puede dar false: también vale ir subiendo.
+			if Input.is_action_just_pressed(ACCION_SALTO) and (jugador.is_on_floor() or jugador.velocity.y > 1.0):
 				_progreso = 1.0
 
 	_progreso = clampf(_progreso, 0.0, 1.0)
