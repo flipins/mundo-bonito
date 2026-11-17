@@ -36,6 +36,7 @@ var _slider_ambiente: HSlider
 var _slider_efectos: HSlider
 var _slider_sensibilidad: HSlider
 var _lista_rendimiento: VBoxContainer
+var _lista_reloj ## Control con reloj_menu.gd
 var _primer_boton_rendimiento: Button
 var _botones_rendimiento: Dictionary = {}
 var _fuente_titulo: Font
@@ -67,6 +68,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not get_tree().paused:
 		pausar()
+	elif _lista_reloj.visible:
+		_on_volver_reloj()
 	elif _lista_rendimiento.visible:
 		_on_volver_rendimiento()
 	elif _lista_ajustes.visible:
@@ -159,10 +162,12 @@ func _crear_interfaz() -> void:
 	columna.add_child(_lista_principal)
 	_boton_continuar = _agregar_boton(_lista_principal, "Continuar", continuar)
 	_agregar_boton(_lista_principal, "Opciones", _mostrar_opciones)
+	_agregar_boton(_lista_principal, "Reloj", _mostrar_reloj)
 	_agregar_boton(_lista_principal, "Menú principal", _on_menu_principal)
 
 	_crear_ajustes(columna)
 	_crear_rendimiento(columna)
+	_crear_reloj(columna)
 
 
 func _crear_ajustes(columna: Control) -> void:
@@ -352,6 +357,7 @@ func _entrada_suave() -> void:
 func _mostrar_principal() -> void:
 	_lista_ajustes.hide()
 	_lista_rendimiento.hide()
+	_lista_reloj.hide()
 	_lista_principal.show()
 	# Al abrir el menú o volver de Ajustes no debe sonar el "hover".
 	_sin_sonido = true
@@ -461,3 +467,33 @@ func _on_volver_rendimiento() -> void:
 	_lista_rendimiento.hide()
 	_lista_ajustes.show()
 	_slider_volumen.grab_focus()
+
+
+# ---------------------------------------------------------------- Reloj
+
+# Pantalla para cambiar la hora del juego (la lógica y el dibujo están en reloj_menu.gd).
+func _crear_reloj(columna: Control) -> void:
+	_lista_reloj = VBoxContainer.new()
+	_lista_reloj.set_script(preload("res://scripts/ui/reloj_menu.gd"))
+	_lista_reloj.visible = false
+	columna.add_child(_lista_reloj)
+	_lista_reloj.add_child(_crear_etiqueta("RELOJ", 34, COLOR_TEXTO, _fuente_item))
+	_lista_reloj.construir(_fuente_item)
+	_agregar_boton(_lista_reloj, "Volver", _on_volver_reloj)
+
+
+func _mostrar_reloj() -> void:
+	_lista_principal.hide()
+	_lista_reloj.abrir()
+	_lista_reloj.show()
+	_sin_sonido = true
+	_lista_reloj.primer_foco().grab_focus()
+	_sin_sonido = false
+
+
+func _on_volver_reloj() -> void:
+	_lista_reloj.hide()
+	_lista_principal.show()
+	_sin_sonido = true
+	_boton_continuar.grab_focus()
+	_sin_sonido = false

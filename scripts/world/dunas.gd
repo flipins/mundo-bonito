@@ -25,6 +25,10 @@ const GRUPO_GRIETA := &"grieta_desierto"
 const RUTA_RUINAS := "res://scripts/world/ruinas_inicio.gd"
 # Script que construye sendero, postes, costillas, rocas, hierba y polvo.
 const RUTA_PROPS := "res://scripts/world/props_recorrido.gd"
+# Script que construye la calavera gigante que queda de fondo detrás de la arena de combate.
+const RUTA_CALAVERA := "res://scripts/world/calavera_arena.gd"
+# Script que construye las zonas de huesos repartidas por el mapa.
+const RUTA_HUESOS := "res://scripts/world/zonas_huesos.gd"
 # Color de la arena cuando se pintan colores por vértice (el mismo de la arena lisa).
 const COLOR_ARENA := Color(0.85, 0.7, 0.47)
 # Texturas de arena: las mismas que usa la pantalla de título.
@@ -203,6 +207,18 @@ static var _texturas_cache: Dictionary = {}
 		con_props = valor
 		_regenerar_pronto()
 
+## Pone una calavera gigante con cuernos de fondo, detrás de la arena de combate. Solo con "Con Arena".
+@export var con_calavera: bool = true:
+	set(valor):
+		con_calavera = valor
+		_regenerar_pronto()
+
+## Reparte zonas de huesos (costillares, esqueletos, colmillos y huesos sueltos) por el valle y la arena.
+@export var con_huesos: bool = true:
+	set(valor):
+		con_huesos = valor
+		_regenerar_pronto()
+
 @export_group("Aspecto")
 ## Tinte cálido que se multiplica con la textura de arena (blanco = sin cambio).
 @export var tinte_arena: Color = Color(1.0, 0.86, 0.66):
@@ -378,6 +394,8 @@ func _generar() -> void:
 
 	_generar_ruinas()
 	_generar_props()
+	_generar_calavera()
+	_generar_huesos()
 
 
 # Altura final del terreno: el terreno original (dunas + valle) con el claro de combate encima.
@@ -567,6 +585,36 @@ func _generar_props() -> void:
 	props.set_script(load(RUTA_PROPS))
 	add_child(props)
 	props.call("construir", self)
+
+
+# Crea (o vuelve a crear) la calavera gigante detrás de la arena de combate.
+func _generar_calavera() -> void:
+	var vieja: Node = get_node_or_null("CalaveraGenerada")
+	if vieja != null:
+		remove_child(vieja)
+		vieja.free()
+	if not con_calavera or not usar_valle or not con_arena or not ResourceLoader.exists(RUTA_CALAVERA):
+		return
+	var calavera := Node3D.new()
+	calavera.name = "CalaveraGenerada"
+	calavera.set_script(load(RUTA_CALAVERA))
+	add_child(calavera)
+	calavera.call("construir", self)
+
+
+# Crea (o vuelve a crear) las zonas de huesos repartidas por el mapa.
+func _generar_huesos() -> void:
+	var viejos: Node = get_node_or_null("HuesosGenerados")
+	if viejos != null:
+		remove_child(viejos)
+		viejos.free()
+	if not con_huesos or not usar_valle or not ResourceLoader.exists(RUTA_HUESOS):
+		return
+	var huesos := Node3D.new()
+	huesos.name = "HuesosGenerados"
+	huesos.set_script(load(RUTA_HUESOS))
+	add_child(huesos)
+	huesos.call("construir", self)
 
 
 func _configurar_ruido() -> void:
