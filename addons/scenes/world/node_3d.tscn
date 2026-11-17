@@ -14,7 +14,6 @@
 [ext_resource type="Script" uid="uid://citkucx6anhx3" path="res://scripts/player/interactor.gd" id="12_rudee"]
 [ext_resource type="PackedScene" path="res://addons/nimblux_fx/presets/3d/rain_steady.tscn" id="13_fnvol"]
 [ext_resource type="PackedScene" uid="uid://yglc0vybuj4v" path="res://addons/scenes/menus/menu_pausa.tscn" id="14_pus0n"]
-[ext_resource type="PackedScene" path="res://addons/scenes/world/cama.tscn" id="15_phy77"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ux65f"]
 shader = ExtResource("1_rudee")
@@ -202,8 +201,5 @@ area_size = Vector3(24, 14, 24)
 look_ahead = 0.2
 
 [node name="MenuPausa" parent="." unique_id=85576782 instance=ExtResource("14_pus0n")]
-
-[node name="Cama" parent="." unique_id=684146142 instance=ExtResource("15_phy77")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.471562, 0, 0)
 
 [editable path="Rain"]

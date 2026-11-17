@@ -68,8 +68,8 @@ func _hay_animacion() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# F3 muestra u oculta el reloj en pantalla.
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+	# F4 muestra u oculta el reloj en pantalla.
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F4:
 		_mostrar_debug = not _mostrar_debug
 
 
