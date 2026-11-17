@@ -12,6 +12,9 @@ const PASO_TOQUE := 0.25
 const VELOCIDAD_MANTENER := 4.0 ## Horas del juego por segundo mientras se mantiene una flecha.
 const ESPERA_MANTENER := 0.4
 
+## Modelo 3D del reloj. Si no está en el proyecto, se usa el reloj dibujado por código.
+const RUTA_MODELO := "res://assets/models/reloj_steampunk_3d.glb"
+
 const LATON := Color(0.78, 0.58, 0.24)
 const LATON_OSCURO := Color(0.36, 0.24, 0.10)
 const LATON_CLARO := Color(0.96, 0.80, 0.45)
@@ -21,7 +24,7 @@ const RUNA := Color(1.0, 0.55, 0.15)
 const NUMERAL := Color(0.93, 0.80, 0.52)
 
 var _hora: float = 12.0
-var _esfera: Esfera
+var _esfera ## Esfera3D (modelo) o Esfera (dibujo de respaldo)
 var _pie: Pie
 var _direccion: int = 0
 var _mantenido: float = 0.0
@@ -43,7 +46,10 @@ func construir(fuente: Font) -> void:
 	_primer_boton = izq
 	var sol := BotonIcono.new("sol")
 	sol.pressed.connect(saltar.bind(HORA_MEDIODIA))
-	_esfera = Esfera.new()
+	if ResourceLoader.exists(RUTA_MODELO):
+		_esfera = Esfera3D.new()
+	else:
+		_esfera = Esfera.new()
 	_esfera.fuente = fuente
 	var ocaso := BotonIcono.new("ocaso")
 	ocaso.pressed.connect(saltar.bind(HORA_ATARDECER))
@@ -59,7 +65,7 @@ func construir(fuente: Font) -> void:
 
 	_pie = Pie.new()
 	_pie.fuente = fuente
-	_pie.custom_minimum_size = Vector2(Esfera.ANCHO + 4.0 * BotonIcono.LADO + 16.0, 64.0)
+	_pie.custom_minimum_size = Vector2(_esfera.custom_minimum_size.x + 4.0 * BotonIcono.LADO + 16.0, 64.0)
 	add_child(_pie)
 
 
@@ -73,6 +79,8 @@ func abrir() -> void:
 	_hora = Reloj.hora
 	_direccion = 0
 	_refrescar()
+	if _esfera.has_method("reproducir_caida"):
+		_esfera.reproducir_caida()
 
 
 func _process(delta: float) -> void:
@@ -222,6 +230,170 @@ class Esfera extends Control:
 		var borde := pts.duplicate()
 		borde.append(pts[0])
 		draw_polyline(borde, Color(0.4, 0.28, 0.12), 1.0, true)
+
+
+# ------------------------------------------------------------------------------------
+# El reloj en 3D: cuelga de una cadena y cae al abrir la pantalla
+# ------------------------------------------------------------------------------------
+
+class Esfera3D extends SubViewportContainer:
+	const ANCHO := 340.0
+	const ALTO := 400.0
+	## Altura del anillo del reloj en el modelo (donde se engancha la cadena).
+	const ANILLO := 1.757
+	const PIVOTE_Y := 2.2
+	const ALTURA_CAIDA := 6.0
+	const GRAVEDAD := 24.0
+	## El modelo viene con las agujas marcando las 10:25.
+	const HORA_MODELO := 10.0 + 25.0 / 60.0
+
+	var hora: float = 12.0:
+		set(v):
+			hora = v
+			_poner_agujas()
+	var fuente: Font ## No se usa; existe para que se parezca a Esfera.
+
+	var _pivote: Node3D
+	var _aguja_hora: Node3D
+	var _aguja_min: Node3D
+	var _y: float = 0.0
+	var _vy: float = 0.0
+	var _cayendo: bool = false
+	var _ang: float = 0.0
+	var _w: float = 0.0
+	var _giro: float = 0.0
+	var _wg: float = 0.0
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(ANCHO, ALTO)
+		stretch = true
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _ready() -> void:
+		var vp := SubViewport.new()
+		vp.own_world_3d = true
+		vp.transparent_bg = true
+		vp.msaa_3d = Viewport.MSAA_4X
+		add_child(vp)
+
+		# Luz y reflejos cálidos para que el metal se vea dorado y no negro.
+		var cielo := ProceduralSkyMaterial.new()
+		cielo.sky_top_color = Color(0.30, 0.18, 0.09)
+		cielo.sky_horizon_color = Color(1.0, 0.78, 0.48)
+		cielo.ground_horizon_color = Color(0.55, 0.34, 0.16)
+		cielo.ground_bottom_color = Color(0.10, 0.06, 0.03)
+		var sky := Sky.new()
+		sky.sky_material = cielo
+		var env := Environment.new()
+		env.background_mode = Environment.BG_CLEAR_COLOR
+		env.sky = sky
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		var we := WorldEnvironment.new()
+		we.environment = env
+		vp.add_child(we)
+		var sol := DirectionalLight3D.new()
+		sol.light_color = Color(1.0, 0.88, 0.7)
+		sol.light_energy = 1.3
+		sol.rotation_degrees = Vector3(-35.0, 25.0, 0.0)
+		vp.add_child(sol)
+		var foco := OmniLight3D.new()
+		foco.light_color = Color(1.0, 0.75, 0.45)
+		foco.light_energy = 2.0
+		foco.omni_range = 14.0
+		foco.position = Vector3(2.0, 2.0, 5.0)
+		vp.add_child(foco)
+
+		var cam := Camera3D.new()
+		cam.fov = 36.0
+		cam.position = Vector3(0.0, 0.5, 6.5)
+		vp.add_child(cam)
+		cam.current = true
+
+		# El pivote es el punto de donde cuelga todo; al girarlo, el reloj se balancea.
+		_pivote = Node3D.new()
+		vp.add_child(_pivote)
+		var escena: PackedScene = load(RUTA_MODELO)
+		var reloj: Node3D = escena.instantiate()
+		reloj.position = Vector3(0.0, -ANILLO, 0.0)
+		_pivote.add_child(reloj)
+		_aguja_hora = reloj.find_child("HourHand", true, false)
+		_aguja_min = reloj.find_child("MinuteHand", true, false)
+		_cadena()
+		_poner_agujas()
+		_colocar()
+
+	func _cadena() -> void:
+		var laton := StandardMaterial3D.new()
+		laton.albedo_color = Color(0.72, 0.52, 0.24)
+		laton.metallic = 1.0
+		laton.roughness = 0.35
+		for i in range(24):
+			var aro := TorusMesh.new()
+			aro.inner_radius = 0.10
+			aro.outer_radius = 0.26
+			aro.rings = 20
+			aro.ring_segments = 10
+			var mi := MeshInstance3D.new()
+			mi.mesh = aro
+			mi.material_override = laton
+			# Eslabones alternados: uno de frente y el siguiente de canto.
+			var b := Basis(Vector3.RIGHT, PI * 0.5)
+			if i % 2 == 1:
+				b = Basis(Vector3.UP, PI * 0.5) * b
+			mi.basis = b.scaled(Vector3(1.0, 1.0, 1.0))
+			mi.position = Vector3(0.0, 0.1 + 0.3 * float(i), 0.0)
+			_pivote.add_child(mi)
+
+	func _poner_agujas() -> void:
+		if _aguja_hora == null or _aguja_min == null:
+			return
+		# Giran en sentido horario visto de frente (en Godot eso es rotación Z negativa).
+		_aguja_hora.rotation.z = -(hora - HORA_MODELO) / 12.0 * TAU
+		_aguja_min.rotation.z = -(fposmod(hora, 1.0) - 25.0 / 60.0) * TAU
+
+	## El reloj cae desde arriba, la cadena lo frena de golpe y se balancea hasta quedarse quieto.
+	func reproducir_caida() -> void:
+		_y = ALTURA_CAIDA
+		_vy = 0.0
+		_cayendo = true
+		_ang = 0.0
+		_w = 0.0
+		_giro = 0.0
+		_wg = 0.0
+		_colocar()
+
+	func _colocar() -> void:
+		if _pivote == null:
+			return
+		_pivote.position = Vector3(0.0, PIVOTE_Y + _y, 0.0)
+		_pivote.rotation = Vector3(0.0, _giro, _ang)
+
+	func _process(delta: float) -> void:
+		if _pivote == null or not is_visible_in_tree():
+			return
+		var dt := minf(delta, 0.033)
+		if _cayendo:
+			_vy -= GRAVEDAD * dt
+			_y += _vy * dt
+			if _y <= 0.0:
+				# La cadena se tensa: rebote corto y balanceo.
+				_y = 0.0
+				_vy *= 0.25
+				_cayendo = false
+				_w = 2.6
+				_wg = 3.5
+		else:
+			# Resorte amortiguado en vertical.
+			_vy += (-140.0 * _y - 7.0 * _vy) * dt
+			_y += _vy * dt
+		# Balanceo y pequeño giro, amortiguados.
+		_w += (-22.0 * _ang - 1.8 * _w) * dt
+		_ang += _w * dt
+		_wg += (-30.0 * _giro - 2.5 * _wg) * dt
+		_giro += _wg * dt
+		_colocar()
 
 
 # ------------------------------------------------------------------------------------
