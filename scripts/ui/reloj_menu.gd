@@ -15,7 +15,8 @@ const ESPERA_MANTENER := 0.4
 const LATON := Color(0.78, 0.58, 0.24)
 const LATON_OSCURO := Color(0.36, 0.24, 0.10)
 const LATON_CLARO := Color(0.96, 0.80, 0.45)
-const CARA := Color(0.15, 0.10, 0.07)
+const CARA := Color(0.88, 0.80, 0.64)
+const TINTA := Color(0.14, 0.09, 0.06)
 const RUNA := Color(1.0, 0.55, 0.15)
 const NUMERAL := Color(0.93, 0.80, 0.52)
 
@@ -28,45 +29,38 @@ var _primer_boton: Control
 
 
 func construir(fuente: Font) -> void:
-	add_theme_constant_override("separation", 4)
+	# Que no se estire a todo el ancho de la columna del menú.
+	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	add_theme_constant_override("separation", 0)
 
-	# Reloj con una flecha a cada lado.
+	# Como en el diseño: flecha, sol, reloj, atardecer, flecha.
 	var fila := HBoxContainer.new()
-	fila.alignment = BoxContainer.ALIGNMENT_BEGIN
-	fila.add_theme_constant_override("separation", 6)
+	fila.add_theme_constant_override("separation", 4)
 	add_child(fila)
 	var izq := BotonIcono.new("izq")
 	izq.button_down.connect(_apretar.bind(-1))
 	izq.button_up.connect(_soltar)
 	_primer_boton = izq
-	fila.add_child(izq)
+	var sol := BotonIcono.new("sol")
+	sol.pressed.connect(saltar.bind(HORA_MEDIODIA))
 	_esfera = Esfera.new()
 	_esfera.fuente = fuente
-	fila.add_child(_esfera)
+	var ocaso := BotonIcono.new("ocaso")
+	ocaso.pressed.connect(saltar.bind(HORA_ATARDECER))
 	var der := BotonIcono.new("der")
 	der.button_down.connect(_apretar.bind(1))
 	der.button_up.connect(_soltar)
-	fila.add_child(der)
-	for b: Control in [izq, der]:
-		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for n: Control in [izq, sol, _esfera, ocaso, der]:
+		fila.add_child(n)
+		if n != _esfera:
+			n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# El sol y el atardecer se pegan al reloj.
+	sol.custom_minimum_size = Vector2(BotonIcono.LADO, BotonIcono.LADO)
 
-	# Debajo: sol, hora digital y atardecer.
-	var abajo := HBoxContainer.new()
-	abajo.add_theme_constant_override("separation", 6)
-	add_child(abajo)
-	var sol := BotonIcono.new("sol")
-	sol.pressed.connect(saltar.bind(HORA_MEDIODIA))
-	abajo.add_child(sol)
 	_pie = Pie.new()
 	_pie.fuente = fuente
-	_pie.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	abajo.add_child(_pie)
-	var ocaso := BotonIcono.new("ocaso")
-	ocaso.pressed.connect(saltar.bind(HORA_ATARDECER))
-	abajo.add_child(ocaso)
-
-	# Ancho total: flecha + reloj + flecha.
-	custom_minimum_size = Vector2(Esfera.ANCHO + 2.0 * BotonIcono.LADO + 12.0, 0.0)
+	_pie.custom_minimum_size = Vector2(Esfera.ANCHO + 4.0 * BotonIcono.LADO + 16.0, 64.0)
+	add_child(_pie)
 
 
 ## Primer botón que recibe el foco al entrar (el de la flecha izquierda).
@@ -191,12 +185,13 @@ class Esfera extends Control:
 	func _cara(c: Vector2, r: float) -> void:
 		draw_circle(c, r * 0.78, LATON)
 		draw_circle(c, r * 0.76, CARA)
-		draw_arc(c, r * 0.72, 0.0, TAU, 96, Color(LATON, 0.6), 1.5, true)
+		draw_arc(c, r * 0.72, 0.0, TAU, 96, Color(TINTA, 0.7), 1.5, true)
+		draw_arc(c, r * 0.76, 0.0, TAU, 96, LATON_OSCURO, 3.0, true)
 		# Marcas de los minutos.
 		for i in range(60):
 			var dir := Vector2.from_angle(float(i) / 60.0 * TAU - PI * 0.5)
 			var largo := 8.0 if i % 5 == 0 else 3.5
-			draw_line(c + dir * r * 0.72, c + dir * (r * 0.72 - largo), Color(NUMERAL, 0.8), 1.5 if i % 5 == 0 else 1.0)
+			draw_line(c + dir * r * 0.72, c + dir * (r * 0.72 - largo), Color(TINTA, 0.85), 1.5 if i % 5 == 0 else 1.0)
 		# Números romanos.
 		if fuente != null:
 			for i in range(12):
@@ -204,7 +199,7 @@ class Esfera extends Control:
 				var tam := 17
 				var s: String = NUMEROS[i]
 				var med := fuente.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, tam)
-				draw_string(fuente, p + Vector2(-med.x * 0.5, tam * 0.35), s, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, NUMERAL)
+				draw_string(fuente, p + Vector2(-med.x * 0.5, tam * 0.35), s, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, TINTA)
 
 	func _agujas(c: Vector2, r: float) -> void:
 		var ang_h := fposmod(hora, 12.0) / 12.0 * TAU - PI * 0.5
@@ -223,10 +218,10 @@ class Esfera extends Control:
 			c + d * largo,
 			c + d * largo * 0.28 - p * ancho * 0.5,
 		])
-		draw_colored_polygon(pts, LATON)
+		draw_colored_polygon(pts, TINTA)
 		var borde := pts.duplicate()
 		borde.append(pts[0])
-		draw_polyline(borde, LATON_OSCURO, 1.5, true)
+		draw_polyline(borde, Color(0.4, 0.28, 0.12), 1.0, true)
 
 
 # ------------------------------------------------------------------------------------
@@ -288,9 +283,9 @@ class BotonIcono extends Button:
 			draw_arc(c, 29.0, 0.0, TAU, 40, Color(RUNA, 0.45), 2.0, true)
 		match tipo:
 			"izq":
-				draw_polyline(PackedVector2Array([c + Vector2(6, -11), c + Vector2(-6, 0), c + Vector2(6, 11)]), col, 3.5, true)
+				draw_colored_polygon(PackedVector2Array([c + Vector2(8, -12), c + Vector2(-9, 0), c + Vector2(8, 12)]), col)
 			"der":
-				draw_polyline(PackedVector2Array([c + Vector2(-6, -11), c + Vector2(6, 0), c + Vector2(-6, 11)]), col, 3.5, true)
+				draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -12), c + Vector2(9, 0), c + Vector2(-8, 12)]), col)
 			"sol":
 				draw_circle(c, 6.5, col)
 				for i in range(8):
