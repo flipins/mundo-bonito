@@ -640,26 +640,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.08939, -7.8249774, 164.697
 
 [node name="Dunas" parent="." unique_id=1115472880 instance=ExtResource("11_fkf5q")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.471562, 0, 0)
-usar_valle = null
-semiancho_valle = null
-altura_pared = null
-ancho_pared = null
-meandro = null
-profundidad_hondonada = null
-muro_trasero = null
-subida_fondo = null
-distancia_hondonada = null
-distancia_fondo = null
-ensanche_central = null
-variacion_borde = null
-con_arena = null
-distancia_arena = null
-radio_arena = null
-transicion_arena = null
-altura_cierre = null
-con_ruinas = null
-posicion_ruinas = null
-con_props = null
-tinte_arena = null
 
 [editable path="Rain"]

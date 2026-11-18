@@ -1,0 +1,43 @@
+MUNDO BONITO - NUEVO RELOJ CINEMATOGRAFICO
+========================================
+
+ARCHIVOS QUE SE INSTALAN
+
+scripts/ui/reloj_menu.gd                  [REEMPLAZAR archivo existente]
+assets/ui/reloj/fondo_ornamental.png      [NUEVO]
+assets/ui/reloj/particulas_doradas.png    [NUEVO]
+assets/ui/reloj/reloj_colgante.png        [NUEVO]
+
+INSTALACION
+
+1. Cierra Godot si esta abierto o deja que reimporte los archivos al volver.
+2. Extrae este ZIP.
+3. Copia las carpetas scripts y assets dentro de la carpeta RAIZ del proyecto
+   Mundo Bonito, fusionando las carpetas que ya existen.
+4. Cuando te pregunte, reemplaza scripts/ui/reloj_menu.gd.
+5. NO reemplaces menu_pausa.gd, reloj.gd ni project.godot.
+6. Abre el proyecto en Godot y juega. Pulsa Esc y elige RELOJ.
+
+CONTROLES
+
+- Flecha izquierda: -10 minutos.
+- Flecha derecha:  +10 minutos.
+- Mantener pulsada una flecha: repite saltos de 10 minutos.
+- Flechas izquierda/derecha del teclado (o A/D si estan mapeadas): cambia hora.
+- Esc o VOLVER AL JUEGO: cierra con animacion y reanuda el juego.
+
+DETALLES
+
+- Se reutilizan los 3 PNG proporcionados, sin editarlos.
+- El fondo negro del recorte del reloj se elimina visualmente con un shader.
+- Las manecillas de la foto son fijas; por eso se cubre el dial interior
+  con una esfera dibujada dinamicamente, cuyas manecillas si giran.
+- El reloj se anima como una capa de interfaz, no como objeto 3D.
+- La hora se comunica al autoload Reloj existente mediante saltar_a_hora().
+- El script menu_pausa.gd actual ya tiene las llamadas que necesita el nuevo reloj.
+- La fotografia original del reloj tiene resolucion baja; al ampliarla
+  el metal/la cadena pueden verse menos nitidos que un reloj 3D.
+
+SI GODOT REPORTA UN ERROR
+
+Enviame una captura del error exacto con el numero de linea para corregirlo.
