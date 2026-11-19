@@ -14,6 +14,8 @@
 [ext_resource type="Script" uid="uid://dvgqw4yj37h5y" path="res://scripts/player/barra_vida.gd" id="9_yf1o2"]
 [ext_resource type="PackedScene" path="res://addons/scenes/world/cama.tscn" id="10_4tjat"]
 [ext_resource type="PackedScene" uid="uid://c042vj0r2uuov" path="res://addons/scenes/world/dunas.tscn" id="11_fkf5q"]
+[ext_resource type="Script" uid="uid://byveoskjbwsmi" path="res://scripts/enemigos/control_arena.gd" id="15_yf1o2"]
+[ext_resource type="Script" uid="uid://dsjxomloj63jf" path="res://scripts/ui/pantalla_muerte.gd" id="16_ipi4u"]
 
 [sub_resource type="GDScript" id="GDScript_ssux7"]
 
@@ -640,5 +642,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.08939, -7.8249774, 164.697
 
 [node name="Dunas" parent="." unique_id=1115472880 instance=ExtResource("11_fkf5q")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.471562, 0, 0)
+
+[node name="ControlArena" type="Node" parent="." unique_id=2039394007]
+script = ExtResource("15_yf1o2")
+
+[node name="PantallaMuerte" type="CanvasLayer" parent="." unique_id=840694834]
+script = ExtResource("16_ipi4u")
 
 [editable path="Rain"]
