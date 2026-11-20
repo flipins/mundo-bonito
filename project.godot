@@ -25,6 +25,7 @@ Reloj="*uid://bh1cpbhe2185y"
 Inventario="*res://scripts/ui/inventario.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 AjustesAudio="*uid://8r6ny8r0e84x"
+SceneTransition="*uid://ysylfddii4ce"
 
 [display]
 

@@ -1,0 +1,96 @@
+[gd_scene format=3 uid="uid://xoul1f46opmg"]
+
+[ext_resource type="Script" uid="uid://d4eucc7hemp0n" path="res://scripts/city/city_json_generator.gd" id="1_2ln0m"]
+[ext_resource type="Script" uid="uid://bu6c6w4aykysp" path="res://scripts/city/city_root.gd" id="1_o6lbb"]
+[ext_resource type="PackedScene" uid="uid://3x1eer8spvjv" path="res://addons/scenes/world/jugador.tscn" id="1_wnsmk"]
+[ext_resource type="Script" uid="uid://ccpmbkg1bpcb8" path="res://scripts/city/wake_up_controller.gd" id="3_he8rr"]
+
+[sub_resource type="Environment" id="Environment_o3ss8"]
+
+[node name="CoastalCity" type="Node3D" unique_id=985624665]
+script = ExtResource("1_o6lbb")
+
+[node name="CityJsonGenerator" type="Node3D" parent="." unique_id=546221959]
+script = ExtResource("1_2ln0m")
+
+[node name="GeneratedCity" type="Node3D" parent="CityJsonGenerator" unique_id=668037103]
+
+[node name="Buildings" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=1747120813]
+
+[node name="Castle" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=460168611]
+
+[node name="Walls" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=1583266212]
+
+[node name="Docks" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=318348250]
+
+[node name="Environment" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=251831291]
+
+[node name="RecoveryRoom" type="Node3D" parent="." unique_id=123414273]
+
+[node name="Floor" type="CSGBox3D" parent="RecoveryRoom" unique_id=1353361131]
+use_collision = true
+size = Vector3(10, 0.3, 10)
+
+[node name="WallLeft" type="CSGBox3D" parent="RecoveryRoom" unique_id=1825399215]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2.3, 0)
+use_collision = true
+size = Vector3(0.35, 4.6, 10)
+
+[node name="WallRight" type="CSGBox3D" parent="RecoveryRoom" unique_id=1895056018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2.3, 0)
+use_collision = true
+size = Vector3(0.35, 4.6, 10)
+
+[node name="WallBack" type="CSGBox3D" parent="RecoveryRoom" unique_id=1597185280]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 5)
+use_collision = true
+size = Vector3(10, 4.6, 0.35)
+
+[node name="WallFrontLeft" type="CSGBox3D" parent="RecoveryRoom" unique_id=240120545]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1, 2.3, -5)
+use_collision = true
+size = Vector3(3.8, 4.6, 0.35)
+
+[node name="WallFrontRight" type="CSGBox3D" parent="RecoveryRoom" unique_id=1875144931]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1, 2.3, -5)
+use_collision = true
+size = Vector3(3.8, 4.6, 0.35)
+
+[node name="DoorLintel" type="CSGBox3D" parent="RecoveryRoom" unique_id=1498164929]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, -5)
+use_collision = true
+size = Vector3(2.4, 1.2, 0.35)
+
+[node name="Roof" type="CSGBox3D" parent="RecoveryRoom" unique_id=338492451]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.8, 0)
+use_collision = true
+size = Vector3(10, 0.3, 10)
+
+[node name="BedBase" type="CSGBox3D" parent="RecoveryRoom" unique_id=233217017]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 1.8)
+use_collision = true
+size = Vector3(2.2, 0.6, 3.1)
+
+[node name="Mattress" type="CSGBox3D" parent="RecoveryRoom" unique_id=1411581828]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 1.8)
+use_collision = true
+size = Vector3(2, 0.25, 3)
+
+[node name="WakeUpSpawnPoint" type="Marker3D" parent="RecoveryRoom" unique_id=226244817]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 1.8)
+
+[node name="StandUpSpawnPoint" type="Marker3D" parent="RecoveryRoom" unique_id=1817121858]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0.2, -1)
+
+[node name="WakeUpController" type="Node3D" parent="." unique_id=1535869182]
+script = ExtResource("3_he8rr")
+
+[node name="WakeCamera" type="Camera3D" parent="WakeUpController" unique_id=1953607565]
+fov = 70.0
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=577072642]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=256938144]
+environment = SubResource("Environment_o3ss8")
+
+[node name="Jugador" parent="." unique_id=81560032 instance=ExtResource("1_wnsmk")]

@@ -2,18 +2,14 @@
 
 [ext_resource type="Texture2D" uid="uid://y2rosh6pwqt3" path="res://SourceCode/textures/clouds/clouds_03.tres" id="2_7u18c"]
 [ext_resource type="Texture2D" uid="uid://cfp60l0lt2it5" path="res://SourceCode/textures/clouds/clouds_04.tres" id="3_ssux7"]
+[ext_resource type="PackedScene" uid="uid://3x1eer8spvjv" path="res://addons/scenes/world/jugador.tscn" id="4_ot6as"]
 [ext_resource type="Script" uid="uid://cjqbfyg6heyfw" path="res://ciclo_dia.gd" id="5_ipi4u"]
-[ext_resource type="Script" uid="uid://ux57ikmyabtr" path="res://scripts/player/jugador.gd" id="6_fvel5"]
-[ext_resource type="Script" uid="uid://citkucx6anhx3" path="res://scripts/player/interactor.gd" id="7_fvel5"]
-[ext_resource type="PackedScene" uid="uid://c1a8yfoq4u08a" path="res://UAL1_Standard.glb" id="7_ssux7"]
-[ext_resource type="PackedScene" path="res://addons/scenes/ui/tutorial_controles.tscn" id="8_7u18c"]
 [ext_resource type="PackedScene" path="res://addons/nimblux_fx/presets/3d/rain_steady.tscn" id="8_w2cgn"]
-[ext_resource type="Script" uid="uid://b7dftx8a5lvi6" path="res://scripts/player/animar_maniqui.gd" id="8_yf1o2"]
 [ext_resource type="PackedScene" uid="uid://yglc0vybuj4v" path="res://addons/scenes/menus/menu_pausa.tscn" id="9_sd36r"]
 [ext_resource type="PackedScene" path="res://addons/scenes/world/caminata_desierto.tscn" id="9_ssux7"]
-[ext_resource type="Script" uid="uid://dvgqw4yj37h5y" path="res://scripts/player/barra_vida.gd" id="9_yf1o2"]
 [ext_resource type="PackedScene" path="res://addons/scenes/world/cama.tscn" id="10_4tjat"]
 [ext_resource type="PackedScene" uid="uid://c042vj0r2uuov" path="res://addons/scenes/world/dunas.tscn" id="11_fkf5q"]
+[ext_resource type="Script" uid="uid://fqob7j1qqjy6" path="res://scripts/world/tutorial_end_trigger.gd" id="12_fvel5"]
 [ext_resource type="Script" uid="uid://byveoskjbwsmi" path="res://scripts/enemigos/control_arena.gd" id="15_yf1o2"]
 [ext_resource type="Script" uid="uid://dsjxomloj63jf" path="res://scripts/ui/pantalla_muerte.gd" id="16_ipi4u"]
 
@@ -564,11 +560,8 @@ _data = {
 &"ciclo": SubResource("Animation_imku0")
 }
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_o3ss8"]
-radius = 0.33691406
-height = 2.03376
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_o3ss8"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_ot6as"]
+size = Vector3(16, 6, 7)
 
 [node name="Node3D" type="Node3D" unique_id=1041302944]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.2244172, 0)
@@ -584,39 +577,12 @@ libraries/ = SubResource("AnimationLibrary_wlxy5")
 autoplay = &"ciclo"
 script = ExtResource("5_ipi4u")
 
-[node name="jugador" type="CharacterBody3D" parent="." unique_id=1519385605]
+[node name="jugador" parent="." unique_id=81560032 instance=ExtResource("4_ot6as")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15596312, 0)
-script = ExtResource("6_fvel5")
-distancia_camara = 2.5
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="jugador" unique_id=1357325647]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0464525, 0)
-shape = SubResource("CapsuleShape3D_o3ss8")
+[node name="CaminataDesierto" parent="." unique_id=819507095 instance=ExtResource("9_ssux7")]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="jugador" unique_id=332503308]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9980709, 0)
-visible = false
-mesh = SubResource("CapsuleMesh_o3ss8")
-
-[node name="Camera3D" type="Camera3D" parent="jugador" unique_id=2031133633]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4847239, 0)
-
-[node name="RayCast3D" type="RayCast3D" parent="jugador/Camera3D" unique_id=325704052]
-script = ExtResource("7_fvel5")
-
-[node name="TutorialControles" parent="jugador" unique_id=84072725 instance=ExtResource("8_7u18c")]
-
-[node name="UAL1_Standard" parent="jugador" unique_id=805197338 instance=ExtResource("7_ssux7")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
-script = ExtResource("8_yf1o2")
-
-[node name="CanvasLayer" type="CanvasLayer" parent="jugador" unique_id=547090833]
-script = ExtResource("9_yf1o2")
-
-[node name="CaminataDesierto" parent="." unique_id=819507095 node_paths=PackedStringArray("tutorial") instance=ExtResource("9_ssux7")]
-tutorial = NodePath("../jugador/TutorialControles")
-
-[node name="Rain" parent="." unique_id=1388216061 node_paths=PackedStringArray("follow_target") instance=ExtResource("8_w2cgn")]
+[node name="Rain" parent="." unique_id=1388216061 instance=ExtResource("8_w2cgn")]
 transform = Transform3D(0.9998477, 0, 0.017452406, 0, 1, 0, -0.017452406, 0, 0.9998477, 0, 1, 0)
 visible = false
 fall_speed = 10.5
@@ -631,7 +597,6 @@ amount = 0.52
 time_scale = 1.47
 fade_time = 1.5
 follow_camera = false
-follow_target = NodePath("../jugador")
 area_size = Vector3(24, 14, 24)
 look_ahead = 0.2
 
@@ -648,5 +613,12 @@ script = ExtResource("15_yf1o2")
 
 [node name="PantallaMuerte" type="CanvasLayer" parent="." unique_id=840694834]
 script = ExtResource("16_ipi4u")
+
+[node name="TutorialEndTrigger" type="Area3D" parent="." unique_id=2023838241]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 2, -145)
+script = ExtResource("12_fvel5")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TutorialEndTrigger" unique_id=1210783028]
+shape = SubResource("BoxShape3D_ot6as")
 
 [editable path="Rain"]

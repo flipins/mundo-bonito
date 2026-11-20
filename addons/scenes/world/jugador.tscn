@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://3x1eer8spvjv"]
+
+[ext_resource type="Script" uid="uid://ux57ikmyabtr" path="res://scripts/player/jugador.gd" id="1_gxrhx"]
+[ext_resource type="Script" uid="uid://citkucx6anhx3" path="res://scripts/player/interactor.gd" id="2_d1lrw"]
+[ext_resource type="PackedScene" path="res://addons/scenes/ui/tutorial_controles.tscn" id="3_rj5ah"]
+[ext_resource type="PackedScene" uid="uid://c1a8yfoq4u08a" path="res://UAL1_Standard.glb" id="4_j7mqy"]
+[ext_resource type="Script" uid="uid://b7dftx8a5lvi6" path="res://scripts/player/animar_maniqui.gd" id="5_vewdh"]
+[ext_resource type="Script" uid="uid://dvgqw4yj37h5y" path="res://scripts/player/barra_vida.gd" id="6_2ddii"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_o3ss8"]
+radius = 0.33691406
+height = 2.03376
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_o3ss8"]
+
+[node name="jugador" type="CharacterBody3D" unique_id=81560032]
+script = ExtResource("1_gxrhx")
+distancia_camara = 2.5
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=959728711]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0464525, 0)
+shape = SubResource("CapsuleShape3D_o3ss8")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2107904702]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9980709, 0)
+visible = false
+mesh = SubResource("CapsuleMesh_o3ss8")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=2100093712]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4847239, 0)
+
+[node name="RayCast3D" type="RayCast3D" parent="Camera3D" unique_id=770806945]
+script = ExtResource("2_d1lrw")
+
+[node name="TutorialControles" parent="." unique_id=399541173 node_paths=PackedStringArray("jugador") instance=ExtResource("3_rj5ah")]
+jugador = NodePath("..")
+
+[node name="UAL1_Standard" parent="." unique_id=954078284 instance=ExtResource("4_j7mqy")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+script = ExtResource("5_vewdh")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1215321076]
+script = ExtResource("6_2ddii")

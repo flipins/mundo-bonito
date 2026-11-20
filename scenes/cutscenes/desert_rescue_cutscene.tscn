@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://b1538y32l2v0f"]
+
+[ext_resource type="Script" uid="uid://5kbxnhdsk1vw" path="res://scripts/cutscenes/rescue_cutscene.gd" id="1_002dx"]
+[ext_resource type="Script" uid="uid://b78u4fiwqhpvy" path="res://scripts/cutscenes/horse_placeholder.gd" id="1_mcfr3"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_clrkq"]
+size = Vector2(1600, 1600)
+
+[sub_resource type="Sky" id="Sky_mcfr3"]
+
+[sub_resource type="Environment" id="Environment_o3ss8"]
+background_mode = 2
+sky = SubResource("Sky_mcfr3")
+
+[sub_resource type="Curve3D" id="Curve3D_002dx"]
+
+[node name="DesertRescueCutscene" type="Node3D" unique_id=339968714]
+script = ExtResource("1_002dx")
+
+[node name="Environment" type="Node3D" parent="." unique_id=294138162]
+
+[node name="SandGround" type="MeshInstance3D" parent="Environment" unique_id=1186899126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
+mesh = SubResource("PlaneMesh_clrkq")
+
+[node name="Sun" type="DirectionalLight3D" parent="Environment" unique_id=721926806]
+transform = Transform3D(0.90630776, 0.29883623, -0.29883623, 0, 0.70710677, 0.70710677, 0.42261827, -0.6408563, 0.6408563, 0, 0, 0)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment" unique_id=962749253]
+environment = SubResource("Environment_o3ss8")
+
+[node name="CameraRig" type="Node3D" parent="." unique_id=1488586833]
+
+[node name="CinematicCamera" type="Camera3D" parent="CameraRig" unique_id=102854329]
+current = true
+fov = 70.0
+
+[node name="CityPreviewAnchor" type="Node3D" parent="." unique_id=1487173294]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=2120659126]
+
+[node name="HorsePath" type="Path3D" parent="." unique_id=1098623833]
+curve = SubResource("Curve3D_002dx")
+
+[node name="HorseFollowA" type="PathFollow3D" parent="HorsePath" unique_id=1693746632]
+
+[node name="HorseA" type="Node3D" parent="HorsePath/HorseFollowA" unique_id=905204550]
+script = ExtResource("1_mcfr3")
+
+[node name="HorseFollowB" type="PathFollow3D" parent="HorsePath" unique_id=518498463]
+
+[node name="HorseB" type="Node3D" parent="HorsePath/HorseFollowB" unique_id=12635630]
+script = ExtResource("1_mcfr3")
+lleva_protagonista = true
