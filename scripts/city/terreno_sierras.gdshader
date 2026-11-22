@@ -238,17 +238,21 @@ void fragment() {
 			vec3 nb = tri_normal(posicion_local, w, n0, escala_textura_roca * 0.29, fuerza_normal_roca);
 			n_base = normalize(mix(n_suelo, normalize(mix(na, nb, 0.35)), roca));
 		}
+float fade = 1.0 - smoothstep(0.3 * distancia_relieve, distancia_relieve, -VERTEX.z);
+n_local = n_base;
 
-		float fade = 1.0 - smoothstep(0.3 * distancia_relieve, distancia_relieve, -VERTEX.z);
-		float e = 0.7;
-		vec3 g = vec3(
-			relieve(posicion_local + vec3(e, 0.0, 0.0), w) - h,
-			relieve(posicion_local + vec3(0.0, e, 0.0), w) - h,
-			relieve(posicion_local + vec3(0.0, 0.0, e), w) - h
-		) / e;
-		g -= n_base * dot(g, n_base);
-		n_local = normalize(n_base - g * amplitud_relieve * intensidad_relieve * fade * roca);
-	}
+if (fade > 0.0) {
+    float e = 0.7;
+    vec3 g = vec3(
+        relieve(posicion_local + vec3(e, 0.0, 0.0), w) - h,
+        relieve(posicion_local + vec3(0.0, e, 0.0), w) - h,
+        relieve(posicion_local + vec3(0.0, 0.0, e), w) - h
+    ) / e;
+    g -= n_base * dot(g, n_base);
+            n_local = normalize(n_base - g * amplitud_relieve * intensidad_relieve * fade * roca);
+    }
+NORMAL = normalize(mat3(VIEW_MATRIX) * (MODEL_NORMAL_MATRIX * n_local));
+}
 	NORMAL = normalize(mat3(VIEW_MATRIX) * (MODEL_NORMAL_MATRIX * n_local));
 
 	// --- Color de la roca ---

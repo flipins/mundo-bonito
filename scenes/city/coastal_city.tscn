@@ -90,6 +90,7 @@ script = ExtResource("3_txapd")
 [node name="Props" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=55662472]
 
 [node name="RecoveryRoom" type="Node3D" parent="." unique_id=123414273]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -120, 0, 70)
 
 [node name="Floor" type="CSGBox3D" parent="RecoveryRoom" unique_id=1353361131]
 use_collision = true
@@ -173,13 +174,16 @@ shape = SubResource("BoxShape3D_o3ss8")
 
 [node name="MenuPausa" parent="." unique_id=1160718712 instance=ExtResource("13_ejdax")]
 
-[node name="WorldEnvironment2" parent="." unique_id=2143519807 instance=ExtResource("13_rruwo")]
+[node name="WorldEnvironment" parent="." unique_id=2143519807 instance=ExtResource("13_rruwo")]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2084261960]
+light_color = Color(1, 0.86, 0.68, 1)
+light_energy = 1.6
 shadow_enabled = true
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 900.0
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=666221403]
-root_node = NodePath("../DirectionalLight3D")
 libraries/ = SubResource("AnimationLibrary_ihuss")
 autoplay = &"ciclo"
 script = ExtResource("14_x72yn")
