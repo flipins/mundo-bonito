@@ -1,0 +1,146 @@
+[gd_scene format=3 uid="uid://b8kgk8whcxd4d"]
+
+[ext_resource type="Texture2D" uid="uid://fkmrg03qpwlv" path="res://scenes/city/Planks024B_2K-JPG_Color.jpg" id="1"]
+[ext_resource type="Texture2D" uid="uid://bg8gixowqirrn" path="res://scenes/city/Planks024B_2K-JPG_NormalGL.jpg" id="2_xguub"]
+[ext_resource type="Texture2D" uid="uid://bq5awufxcjl7o" path="res://scenes/city/Planks024B_2K-JPG_Roughness.jpg" id="3_ygvuy"]
+
+[sub_resource type="StandardMaterial3D" id="Tablas"]
+albedo_texture = ExtResource("1")
+roughness_texture = ExtResource("3_ygvuy")
+normal_enabled = true
+normal_texture = ExtResource("2_xguub")
+uv1_scale = Vector3(0.25, 0.25, 0.25)
+uv1_triplanar = true
+
+[sub_resource type="BoxMesh" id="Mesh_Acceso"]
+material = SubResource("Tablas")
+size = Vector3(6.03, 0.4, 7)
+
+[sub_resource type="BoxShape3D" id="Forma_Acceso"]
+size = Vector3(6.03, 0.4, 7)
+
+[sub_resource type="BoxMesh" id="Mesh_Paseo"]
+material = SubResource("Tablas")
+size = Vector3(8, 0.4, 52)
+
+[sub_resource type="BoxShape3D" id="Forma_Paseo"]
+size = Vector3(8, 0.4, 52)
+
+[sub_resource type="BoxMesh" id="Mesh_Principal"]
+material = SubResource("Tablas")
+size = Vector3(52, 0.4, 10)
+
+[sub_resource type="BoxShape3D" id="Forma_Principal"]
+size = Vector3(52, 0.4, 10)
+
+[sub_resource type="StandardMaterial3D" id="Tronco"]
+albedo_color = Color(0.22, 0.14, 0.08, 1)
+
+[sub_resource type="CylinderMesh" id="Pilote"]
+material = SubResource("Tronco")
+top_radius = 0.32
+bottom_radius = 0.38
+height = 7.6
+radial_segments = 8
+rings = 0
+
+[sub_resource type="BoxMesh" id="Mesh_Cabezal"]
+material = SubResource("Tablas")
+size = Vector3(10, 0.4, 32)
+
+[sub_resource type="BoxShape3D" id="Forma_Cabezal"]
+size = Vector3(10, 0.4, 32)
+
+[sub_resource type="BoxMesh" id="Mesh_Pesca"]
+material = SubResource("Tablas")
+size = Vector3(48, 0.4, 5)
+
+[sub_resource type="BoxShape3D" id="Forma_Pesca"]
+size = Vector3(48, 0.4, 5)
+
+[node name="Muelle" type="Node3D" unique_id=264865940]
+
+[node name="Acceso" type="StaticBody3D" parent="." unique_id=1158336359]
+transform = Transform3D(0.9964741, -0.08390125, 0, 0.08390125, 0.9964741, 0, 0, 0, 1, 3, 0.04, 0)
+
+[node name="Cubierta" type="MeshInstance3D" parent="Acceso" unique_id=1317360344]
+mesh = SubResource("Mesh_Acceso")
+
+[node name="Colision" type="CollisionShape3D" parent="Acceso" unique_id=1309899810]
+shape = SubResource("Forma_Acceso")
+
+[node name="Paseo" type="StaticBody3D" parent="." unique_id=824302281]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.3, 0)
+
+[node name="Cubierta" type="MeshInstance3D" parent="Paseo" unique_id=613964358]
+mesh = SubResource("Mesh_Paseo")
+
+[node name="Colision" type="CollisionShape3D" parent="Paseo" unique_id=122422530]
+shape = SubResource("Forma_Paseo")
+
+[node name="Principal" type="StaticBody3D" parent="." unique_id=573267104]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0.3, -21)
+
+[node name="Cubierta" type="MeshInstance3D" parent="Principal" unique_id=928734773]
+mesh = SubResource("Mesh_Principal")
+
+[node name="Colision" type="CollisionShape3D" parent="Principal" unique_id=594878291]
+shape = SubResource("Forma_Principal")
+
+[node name="Pilote_26_A" type="MeshInstance3D" parent="Principal" unique_id=54501520]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, -3.2, -4.5)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_26_B" type="MeshInstance3D" parent="Principal" unique_id=2048835285]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, -3.2, 4.5)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_48_A" type="MeshInstance3D" parent="Principal" unique_id=1800192868]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, -3.2, -4.5)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_48_B" type="MeshInstance3D" parent="Principal" unique_id=1855024993]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, -3.2, 4.5)
+mesh = SubResource("Pilote")
+
+[node name="Cabezal" type="StaticBody3D" parent="." unique_id=1398578066]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 71, 0.3, -21)
+
+[node name="Cubierta" type="MeshInstance3D" parent="Cabezal" unique_id=582427281]
+mesh = SubResource("Mesh_Cabezal")
+
+[node name="Colision" type="CollisionShape3D" parent="Cabezal" unique_id=736377178]
+shape = SubResource("Forma_Cabezal")
+
+[node name="Pilote_71_A" type="MeshInstance3D" parent="Cabezal" unique_id=1550407668]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.2, -15)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_71_B" type="MeshInstance3D" parent="Cabezal" unique_id=922193985]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.2, 15)
+mesh = SubResource("Pilote")
+
+[node name="Pesca" type="StaticBody3D" parent="." unique_id=410100280]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 0.3, 15)
+
+[node name="Cubierta" type="MeshInstance3D" parent="Pesca" unique_id=2145259199]
+mesh = SubResource("Mesh_Pesca")
+
+[node name="Colision" type="CollisionShape3D" parent="Pesca" unique_id=655144365]
+shape = SubResource("Forma_Pesca")
+
+[node name="Pilote_38_A" type="MeshInstance3D" parent="Pesca" unique_id=414522523]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.2, -2)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_38_B" type="MeshInstance3D" parent="Pesca" unique_id=1233670683]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.2, 2)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_59_A" type="MeshInstance3D" parent="Pesca" unique_id=1672881945]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, -3.2, -2)
+mesh = SubResource("Pilote")
+
+[node name="Pilote_59_B" type="MeshInstance3D" parent="Pesca" unique_id=1166711971]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, -3.2, 2)
+mesh = SubResource("Pilote")

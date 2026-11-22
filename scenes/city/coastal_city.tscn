@@ -1,17 +1,32 @@
 [gd_scene format=3 uid="uid://xoul1f46opmg"]
 
-[ext_resource type="Script" uid="uid://d4eucc7hemp0n" path="res://scripts/city/city_json_generator.gd" id="1_2ln0m"]
 [ext_resource type="Script" uid="uid://bu6c6w4aykysp" path="res://scripts/city/city_root.gd" id="1_o6lbb"]
 [ext_resource type="PackedScene" uid="uid://3x1eer8spvjv" path="res://addons/scenes/world/jugador.tscn" id="1_wnsmk"]
+[ext_resource type="Script" uid="uid://cpfh6gn4cecjg" path="res://scripts/city/coastal_town_generator.gd" id="2_3cey1"]
 [ext_resource type="Script" uid="uid://ccpmbkg1bpcb8" path="res://scripts/city/wake_up_controller.gd" id="3_he8rr"]
+[ext_resource type="Script" uid="uid://bgjf3h6qvv00h" path="res://scripts/city/mercado_muelle.gd" id="3_txapd"]
 
-[sub_resource type="Environment" id="Environment_o3ss8"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_3cey1"]
+sky_top_color = Color(0.4117647, 0.5882353, 0.7137255, 1)
+sky_horizon_color = Color(0.92941177, 0.84313726, 0.70980394, 1)
+ground_bottom_color = Color(0.57254905, 0.46666667, 0.34117648, 1)
+ground_horizon_color = Color(0.92941177, 0.84313726, 0.70980394, 1)
+
+[sub_resource type="Sky" id="Sky_txapd"]
+sky_material = SubResource("ProceduralSkyMaterial_3cey1")
+
+[sub_resource type="Environment" id="Environment_nvtj0"]
+background_mode = 2
+sky = SubResource("Sky_txapd")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_o3ss8"]
+size = Vector3(1200, 0.4, 1200)
 
 [node name="CoastalCity" type="Node3D" unique_id=985624665]
 script = ExtResource("1_o6lbb")
 
 [node name="CityJsonGenerator" type="Node3D" parent="." unique_id=546221959]
-script = ExtResource("1_2ln0m")
+script = ExtResource("2_3cey1")
 
 [node name="GeneratedCity" type="Node3D" parent="CityJsonGenerator" unique_id=668037103]
 
@@ -22,8 +37,13 @@ script = ExtResource("1_2ln0m")
 [node name="Walls" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=1583266212]
 
 [node name="Docks" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=318348250]
+script = ExtResource("3_txapd")
 
 [node name="Environment" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=251831291]
+
+[node name="Market" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=949357533]
+
+[node name="Props" type="Node3D" parent="CityJsonGenerator/GeneratedCity" unique_id=55662472]
 
 [node name="RecoveryRoom" type="Node3D" parent="." unique_id=123414273]
 
@@ -82,6 +102,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 1.8)
 [node name="StandUpSpawnPoint" type="Marker3D" parent="RecoveryRoom" unique_id=1817121858]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0.2, -1)
 
+[node name="ExteriorYard" type="CSGBox3D" parent="RecoveryRoom" unique_id=1898829328]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, 0)
+size = Vector3(28, 0.3, 28)
+
+[node name="DoorStep" type="CSGBox3D" parent="RecoveryRoom" unique_id=224228430]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -6)
+size = Vector3(3.2, 0.2, 2.2)
+
 [node name="WakeUpController" type="Node3D" parent="." unique_id=1535869182]
 script = ExtResource("3_he8rr")
 
@@ -91,6 +119,17 @@ fov = 70.0
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=577072642]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=256938144]
-environment = SubResource("Environment_o3ss8")
+environment = SubResource("Environment_nvtj0")
 
 [node name="Jugador" parent="." unique_id=81560032 instance=ExtResource("1_wnsmk")]
+
+[node name="TutorialControles" parent="Jugador" index="3" unique_id=399541173]
+iniciar_automaticamente = false
+
+[node name="GroundSafety" type="StaticBody3D" parent="." unique_id=523532523]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundSafety" unique_id=1655355703]
+shape = SubResource("BoxShape3D_o3ss8")
+
+[editable path="Jugador"]

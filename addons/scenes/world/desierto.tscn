@@ -580,7 +580,8 @@ script = ExtResource("5_ipi4u")
 [node name="jugador" parent="." unique_id=81560032 instance=ExtResource("4_ot6as")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15596312, 0)
 
-[node name="CaminataDesierto" parent="." unique_id=819507095 instance=ExtResource("9_ssux7")]
+[node name="CaminataDesierto" parent="." unique_id=819507095 node_paths=PackedStringArray("tutorial") instance=ExtResource("9_ssux7")]
+tutorial = NodePath("../jugador/TutorialControles")
 
 [node name="Rain" parent="." unique_id=1388216061 instance=ExtResource("8_w2cgn")]
 transform = Transform3D(0.9998477, 0, 0.017452406, 0, 1, 0, -0.017452406, 0, 0.9998477, 0, 1, 0)
@@ -621,4 +622,5 @@ script = ExtResource("12_fvel5")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="TutorialEndTrigger" unique_id=1210783028]
 shape = SubResource("BoxShape3D_ot6as")
 
+[editable path="jugador"]
 [editable path="Rain"]
