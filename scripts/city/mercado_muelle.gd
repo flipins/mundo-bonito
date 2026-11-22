@@ -1,12 +1,15 @@
 @tool
 extends Node3D
 
+const CAJON_MANZANAS := "res://assets/fantasy_props/export/FarmCrate_Apple.gltf"
+const CAJON_ZANAHORIAS := "res://assets/fantasy_props/export/FarmCrate_Carrot.gltf"
+
 
 func _ready() -> void:
 	child_entered_tree.connect(_al_entrar)
 
 	var muelle := get_node_or_null("Muelle") as Node3D
-	if muelle:
+	if muelle != null:
 		_montar.call_deferred(muelle.get_instance_id())
 
 
@@ -34,9 +37,16 @@ func _montar(id: int) -> void:
 	var pescado := _material(Color("#91b5b9"))
 	var azul := _material(Color("#397487"))
 	var ocre := _material(Color("#c0833e"))
-	var manzana := _material(Color("#b84b39"))
-	var naranja := _material(Color("#df9137"))
-	var pera := _material(Color("#8eaa48"))
+	var frutas: Array[Material] = [
+		_material(Color("#b84b39")),
+		_material(Color("#df9137")),
+		_material(Color("#8eaa48"))
+	]
+
+	var usar_modelos := (
+		bool(generador.get("generar_decoracion"))
+		and generador.has_method("colocar_modelo_ciudad")
+	)
 
 	for z: float in [-28.0, -41.0, -54.0, 86.0, 99.0, 112.0]:
 		var pesca := z < 0.0
@@ -44,33 +54,30 @@ func _montar(id: int) -> void:
 		puesto.name = ("Pescaderia" if pesca else "Fruteria") + str(int(absf(z)))
 		mercado.add_child(puesto)
 
-		# Sigue la curva del paseo. El frente del mostrador mira al mar.
+		# Alinea el puesto con la curva del paseo.
 		var costa: float = generador.call("_costa", z)
 		var adelante: float = generador.call("_costa", z + 1.0)
 		var atras: float = generador.call("_costa", z - 1.0)
 		puesto.position = Vector3(costa + 2.7, piso, z)
 		puesto.rotation.y = atan2(adelante - atras, 2.0)
 
-		# Mostrador, postes traseros y toldo inclinado.
-		_bloque(puesto, Vector3(0, 0.55, 0), Vector3(1.55, 1.1, 4.4), madera)
+		_bloque(
+			puesto, Vector3(0, 0.55, 0),
+			Vector3(1.55, 1.1, 4.4), madera
+		)
 
 		for extremo: float in [-1.0, 1.0]:
 			_bloque(
-				puesto,
-				Vector3(-0.65, 1.5, extremo * 2.0),
-				Vector3(0.13, 3.0, 0.13),
-				madera
+				puesto, Vector3(-0.65, 1.5, extremo * 2.0),
+				Vector3(0.13, 3.0, 0.13), madera
 			)
 
 		var lona := _bloque(
-			puesto,
-			Vector3(0.12, 2.85, 0),
-			Vector3(2.6, 0.13, 4.9),
-			azul if pesca else ocre
+			puesto, Vector3(0.12, 2.85, 0),
+			Vector3(2.6, 0.13, 4.9), azul if pesca else ocre
 		)
 		lona.rotation.z = -0.10
 
-		# Una sola colisión por mostrador.
 		if generador.get("generar_colisiones"):
 			var cuerpo := StaticBody3D.new()
 			var forma := CollisionShape3D.new()
@@ -81,10 +88,24 @@ func _montar(id: int) -> void:
 			cuerpo.add_child(forma)
 			puesto.add_child(cuerpo)
 
-		# Tres cajones alineados sobre el mostrador.
 		for fila in range(3):
 			var centro_z := (fila - 1) * 1.37
 
+			# Apoya cada cajón importado sobre la mesa, a 1.10 m.
+			if usar_modelos and not pesca:
+				var ruta := CAJON_ZANAHORIAS if fila == 1 else CAJON_MANZANAS
+				var colocado: bool = generador.call(
+					"colocar_modelo_ciudad",
+					puesto,
+					ruta,
+					Vector3(0.0, 1.10, centro_z),
+					1.23,
+					0.0
+				)
+				if colocado:
+					continue
+
+			# Cajón de madera para el pescado o para la fruta de respaldo.
 			_bloque(
 				puesto, Vector3(0, 1.15, centro_z),
 				Vector3(1.38, 0.10, 1.28), madera
@@ -109,15 +130,17 @@ func _montar(id: int) -> void:
 						Vector3(0.30, 0.07, 0.16), pescado
 					)
 			else:
-				var frutas: Array[Material] = [manzana, naranja, pera]
 				for i in range(3):
 					for j in range(3):
-						var p := Vector3(
+						var pos_fruta := Vector3(
 							(i - 1) * 0.34,
 							1.37,
 							centro_z + (j - 1) * 0.34
 						)
-						_ovalo(puesto, p, Vector3(0.31, 0.34, 0.31), frutas[fila])
+						_ovalo(
+							puesto, pos_fruta,
+							Vector3(0.31, 0.34, 0.31), frutas[fila]
+						)
 
 
 func _material(color: Color) -> StandardMaterial3D:
@@ -144,7 +167,7 @@ func _bloque(
 	return nodo
 
 
-# Agrupa los productos del mismo material para dibujarlos juntos.
+# Agrupa los productos que comparten material para dibujarlos juntos.
 func _ovalo(
 	padre: Node3D,
 	pos: Vector3,

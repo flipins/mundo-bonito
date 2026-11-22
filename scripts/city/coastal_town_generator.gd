@@ -113,49 +113,91 @@ func _antorcha_ciudad(padre: Node3D, pos: Vector3) -> void:
 # El generador original elige los lotes, sitúa cada casa sobre el terreno
 # y crea el cimiento a partir de la pieza llamada "Cuerpo".
 
+const KIT_CASAS := {
+	"yeso": preload("res://assets/medieval_village/Export/Wall_Plaster_Straight.gltf"),
+	"ladrillo": preload("res://assets/medieval_village/Export/Wall_UnevenBrick_Straight.gltf"),
+	"pared_puerta": preload("res://assets/medieval_village/Export/Wall_Plaster_Door_Round.gltf"),
+	"pared_ventana": preload("res://assets/medieval_village/Export/Wall_Plaster_Window_Wide_Round.gltf"),
+	"ventana": preload("res://assets/medieval_village/Export/Window_Wide_Round1.gltf"),
+	"puerta": preload("res://assets/medieval_village/Export/Door_1_Round.gltf"),
+	"marco": preload("res://assets/medieval_village/Export/DoorFrame_Round_Brick.gltf"),
+	"techo_corto": preload("res://assets/medieval_village/Export/Roof_RoundTiles_6x6.gltf"),
+	"techo_largo": preload("res://assets/medieval_village/Export/Roof_RoundTiles_6x8.gltf"),
+	"frente_techo": preload("res://assets/medieval_village/Export/Roof_Front_Brick6.gltf")
+}
+
+
 func _crear_casa(numero: int, posicion: Vector2) -> void:
 	var casa := Node3D.new()
 	casa.name = "Casa_%03d" % numero
 	casa.position = Vector3(posicion.x, 0.0, posicion.y)
-
-	var hacia := CENTRO_PLAZA - posicion
-	var giro := roundf(atan2(hacia.x, hacia.y) / (PI * 0.5)) * (PI * 0.5)
-	casa.rotation.y = giro + float(_rng.randi_range(-1, 1)) * 0.12
 	_capa("Buildings").add_child(casa)
 
-	var ancho := _rng.randf_range(9.0, 11.5)
-	var largo := _rng.randf_range(9.0, 12.0)
-	var alto := _rng.randf_range(5.4, 7.1)
-	var tipo := _rng.randf()
+	# La fachada está en -Z. Oriéntala hacia la plaza.
+	var hacia_plaza := CENTRO_PLAZA - posicion
+	casa.rotation.y = atan2(-hacia_plaza.x, -hacia_plaza.y)
 
-	if tipo < 0.45:
-		_caja(
-			casa, "Cuerpo", Vector3(0, alto * 0.5, 0),
-			Vector3(ancho, alto, largo), _adobe_ciudad
-		)
-		_azotea_ciudad(casa, ancho, largo, alto)
-	elif tipo < 0.75:
-		_caja(
-			casa, "Cuerpo", Vector3(0, alto * 0.5, 0),
-			Vector3(ancho, alto, largo), _piedra
-		)
-		_crear_techo(casa, "Tejado", Vector3.UP * alto, ancho, largo, 2.8)
-		_caja(
-			casa, "Chimenea", Vector3(ancho * 0.23, alto + 2.1, -largo * 0.18),
-			Vector3(0.9, 2.8, 0.9), _piedra_oscura, false
-		)
-	else:
-		_caja(
-			casa, "Cuerpo", Vector3(0, alto * 0.5, 0),
-			Vector3(ancho, alto, largo), _adobe_claro_ciudad
-		)
-		_crear_techo(casa, "Tejado", Vector3.UP * alto, ancho, largo, 3.2)
-		_entramado_ciudad(casa, ancho, largo, alto)
+	# Cada panel del pack mide 2 m de ancho y 3 m de alto.
+	var ancho := 6.0
+	var paneles_laterales := 4 if numero % 3 == 0 else 3
+	var largo := paneles_laterales * 2.0
+	var frente := -largo * 0.5
+	var fondo := largo * 0.5
+	var pared := "ladrillo" if numero % 2 == 0 else "yeso"
 
-	_fachada_ciudad(casa, ancho, largo, alto)
+	# El generador original lee "Cuerpo" para calcular el cimiento.
+	# Esta caja invisible conserva también la colisión exterior de la casa.
+	var cuerpo := _caja(
+		casa, "Cuerpo", Vector3(0, 1.5, 0),
+		Vector3(ancho, 3.0, largo), _piedra
+	)
+	cuerpo.visible = false
 
-	if generar_decoracion:
-		_decoracion_casa_ciudad(casa, ancho, largo, numero)
+	# Fachada: ventana, puerta y ventana.
+	_pieza_villa(casa, "pared_puerta", Vector3(0, 0, frente))
+	_pieza_villa(casa, "marco", Vector3(0, 0, frente))
+	# El origen del modelo de puerta está en la bisagra.
+	_pieza_villa(casa, "puerta", Vector3(-0.51, 0, frente - 0.05))
+
+	for x: float in [-2.0, 2.0]:
+		_pieza_villa(casa, "pared_ventana", Vector3(x, 0, frente))
+		_pieza_villa(casa, "ventana", Vector3(x, 0, frente))
+
+	# Parte trasera de la casa.
+	for x: float in [-2.0, 0.0, 2.0]:
+		_pieza_villa(casa, pared, Vector3(x, 0, fondo), 180.0)
+
+	# Laterales. Una ventana en cada costado.
+	for i in range(paneles_laterales):
+		var z := frente + 1.0 + i * 2.0
+		for lado: float in [-1.0, 1.0]:
+			var punto := Vector3(lado * ancho * 0.5, 0, z)
+			var giro := -lado * 90.0
+			if i == 1:
+				_pieza_villa(casa, "pared_ventana", punto, giro)
+				_pieza_villa(casa, "ventana", punto, giro)
+			else:
+				_pieza_villa(casa, pared, punto, giro)
+
+	# Cierra los extremos triangulares bajo el tejado.
+	_pieza_villa(casa, "frente_techo", Vector3(0, 3.0, frente))
+	_pieza_villa(casa, "frente_techo", Vector3(0, 3.0, fondo), 180.0)
+
+	var techo := "techo_largo" if paneles_laterales == 4 else "techo_corto"
+	_pieza_villa(casa, techo, Vector3(0, 3.0, 0))
+
+
+func _pieza_villa(
+	casa: Node3D,
+	clave: String,
+	posicion_local: Vector3,
+	giro_grados: float = 0.0
+) -> void:
+	var escena := KIT_CASAS[clave] as PackedScene
+	var pieza := escena.instantiate() as Node3D
+	casa.add_child(pieza)
+	pieza.position = posicion_local
+	pieza.rotation.y = deg_to_rad(giro_grados)
 
 
 func _azotea_ciudad(casa: Node3D, ancho: float, largo: float, alto: float) -> void:
@@ -338,3 +380,115 @@ func _puesto_ciudad(padre: Node3D, pos: Vector3, fila: float, indice: int) -> vo
 			_vasija_ciudad(padre, pos + Vector3(0.9, 1.30, 0))
 		else:
 			_barril_ciudad(padre, pos + Vector3(2.9, 0, 0))
+const CAJON_MANZANAS := "res://assets/fantasy_props/export/FarmCrate_Apple.gltf"
+const CAJON_ZANAHORIAS := "res://assets/fantasy_props/export/FarmCrate_Carrot.gltf"
+const CARRETA_PLAZA := "res://assets/medieval_village/Export/Prop_Wagon.gltf"
+const COFRE_HABITACION := "res://assets/interior_zappypixel/Export/box.04_animation.glb"
+const TIENDA_CAMPAMENTO := "res://AnimpicStudio/POLY - Medieval Camp/Models/Tent_01.gltf"
+
+
+func generar_ciudad() -> void:
+	super.generar_ciudad()
+
+	if not is_node_ready() or not generar_decoracion:
+		return
+
+	# La capa Market se limpia en cada reconstrucción.
+	var mercado := _capa("Market")
+	if mercado == null:
+		return
+
+	# Carreta a un costado de la plaza, fuera de las filas de puestos.
+	var carro_x := CENTRO_PLAZA.x - 27.0
+	var carro_z := CENTRO_PLAZA.y + 5.0
+	colocar_modelo_ciudad(
+		mercado, CARRETA_PLAZA,
+		Vector3(carro_x, _altura_desierto(carro_x, carro_z), carro_z),
+		4.2, 75.0
+	)
+
+	# Tienda en el lado del desierto, dejando libre el eje de la puerta.
+	var tienda_x := _entrada_x() - 23.0
+	var tienda_z := 27.0
+	colocar_modelo_ciudad(
+		mercado, TIENDA_CAMPAMENTO,
+		Vector3(tienda_x, _altura_desierto(tienda_x, tienda_z), tienda_z),
+		5.0, -35.0
+	)
+
+	# Se usa la posición real del cuarto y la cara superior de su piso.
+	var cuarto := get_parent().get_node_or_null("RecoveryRoom") as Node3D
+	if cuarto != null:
+		var piso := cuarto.get_node_or_null("Floor") as CSGBox3D
+		if piso != null:
+			var junto_a_cama := piso.to_global(
+				Vector3(3.0, piso.size.y * 0.5, 2.0)
+			)
+			colocar_modelo_ciudad(
+				mercado, COFRE_HABITACION,
+				mercado.to_local(junto_a_cama), 1.25,
+				rad_to_deg(cuarto.global_rotation.y - mercado.global_rotation.y)
+			)
+
+
+# Instancia el modelo, ajusta su tamaño y apoya su base en el punto indicado.
+# "ancho" es la medida deseada del lado horizontal más largo, en metros.
+func colocar_modelo_ciudad(
+	padre: Node3D,
+	ruta: String,
+	punto: Vector3,
+	ancho: float,
+	giro_grados: float = 0.0
+) -> bool:
+	if not ResourceLoader.exists(ruta):
+		push_warning("Falta el modelo de ciudad: " + ruta)
+		return false
+
+	var escena := load(ruta) as PackedScene
+	if escena == null:
+		return false
+
+	var instancia := escena.instantiate()
+	var modelo := instancia as Node3D
+	if modelo == null:
+		instancia.free()
+		return false
+
+	var soporte := Node3D.new()
+	soporte.name = ruta.get_file().get_basename().validate_node_name()
+	padre.add_child(soporte, true)
+	soporte.add_child(modelo)
+
+	# Algunos packs tienen el origen en el centro y otros en el suelo.
+	# Medimos las mallas para que ambos queden apoyados a la misma altura.
+	var piezas := modelo.find_children("*", "MeshInstance3D", true, false)
+	if modelo is MeshInstance3D:
+		piezas.append(modelo)
+
+	var limites := AABB()
+	var hay_malla := false
+	var inversa := soporte.global_transform.affine_inverse()
+
+	for nodo in piezas:
+		var pieza := nodo as MeshInstance3D
+		if pieza == null or pieza.mesh == null:
+			continue
+		var caja := (inversa * pieza.global_transform) * pieza.get_aabb()
+		if hay_malla:
+			limites = limites.merge(caja)
+		else:
+			limites = caja
+			hay_malla = true
+
+	var medida := maxf(limites.size.x, limites.size.z)
+	if not hay_malla or medida < 0.001:
+		soporte.free()
+		return false
+
+	var base := limites.get_center()
+	base.y = limites.position.y
+	modelo.position -= base
+	soporte.scale = Vector3.ONE * (ancho / medida)
+	soporte.rotation.y = deg_to_rad(giro_grados)
+	soporte.position = punto
+	return true
