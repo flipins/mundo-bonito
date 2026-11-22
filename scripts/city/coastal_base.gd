@@ -20,24 +20,74 @@ extends Node3D
 @export_group("Llegada cinematica")
 @export_range(90.0, 500.0, 5.0) var longitud_camino_llegada: float = 310.0
 @export_range(140.0, 300.0, 5.0) var semiancho_valle_v25: float = 190.0
-@export_range(5.0, 16.0, 1.0) var paso_malla_v25: float = 8.0
+@export_range(5.0, 16.0, 1.0) var paso_malla_v25: float = 5.0
 @export_range(12.0, 65.0, 1.0) var altura_montanas_v25: float = 38.0
 @export_range(0.0, 6.0, 0.25) var ondulacion_arena_v25: float = 2.0
 @export_range(0.0, 650.0, 10.0) var fondo_escenico: float = 200.0
 @export var generar_montanas_v25: bool = true
+@export_range(0.0, 1.0, 0.05) var estratos_montanas: float = 0.5
 
 @export_group("Materiales")
 @export var material_arena: Material
 
+@export_group("Luz y ambiente")
+@export var ajustar_luz_y_ambiente: bool = true
+@export_range(-180.0, 180.0, 1.0) var azimut_sol: float = 75.0
+@export_range(5.0, 60.0, 1.0) var elevacion_sol: float = 22.0
+@export_range(0.5, 3.0, 0.05) var energia_sol: float = 1.6
+@export var activar_niebla: bool = true
+@export_range(0.0, 0.01, 0.0001) var densidad_niebla: float = 0.0012
+@export_range(0.0, 1.0, 0.05) var perspectiva_aerea: float = 0.6
+
+@export_group("Texturas de roca (opcional)")
+@export var textura_roca_albedo: Texture2D
+@export var textura_roca_normal: Texture2D
+@export_range(0.01, 0.3, 0.005) var escala_textura_roca: float = 0.07
+
+@export_group("Texturas de suelo (opcional)")
+@export var textura_suelo_a_albedo: Texture2D
+@export var textura_suelo_a_normal: Texture2D
+@export_range(0.02, 0.5, 0.01) var escala_suelo_a: float = 0.15
+@export var textura_suelo_b_albedo: Texture2D
+@export var textura_suelo_b_normal: Texture2D
+@export_range(0.02, 0.5, 0.01) var escala_suelo_b: float = 0.10
+@export_range(0.0, 1.0, 0.05) var cobertura_suelo_base: float = 0.8
+
+@export_group("Texturas automaticas")
+@export var cargar_texturas_automaticamente: bool = true
+@export_dir var carpeta_roca: String = "res://assets/texturas/roca montañas"
+@export_dir var carpeta_suelo_a: String = "res://assets/texturas/arena linda"
+@export_dir var carpeta_suelo_b: String = "res://assets/texturas/mas arena"
+
+@export_group("Rocas en las sierras")
+@export var generar_rocas_sierras: bool = true
+@export_range(0.1, 1.0, 0.05) var densidad_rocas: float = 0.6
+@export_range(0.5, 2.5, 0.1) var tamano_rocas: float = 1.0
+@export_range(200, 4000, 100) var maximo_rocas: int = 3000
+
+@export_group("Cordillera lejana")
+@export var generar_cordillera: bool = true
+@export_range(1, 4, 1) var capas_cordillera: int = 3
+@export_range(40.0, 300.0, 5.0) var altura_cordillera: float = 110.0
+
 @export_group("Castillo")
 @export_range(15.0, 45.0, 1.0) var altura_castillo: float = 25.0
+
+@export_group("Castillo de montaña")
+@export var generar_castillo_montana: bool = true
+@export_range(-400.0, -100.0, 5.0) var x_castillo_montana: float = -200.0
+@export_range(-1.0, 1.0, 2.0) var lado_castillo_montana: float = -1.0  # -1 norte, 1 sur
+@export_range(16.0, 80.0, 1.0) var radio_meseta: float = 44.0
 
 @export_group("Generacion")
 @export_tool_button("Construir puerto V3.4")
 var boton_generar = generar_ciudad
 
+
 const ESCENA_MUELLE: PackedScene = preload("res://scenes/city/muelle.tscn")
 const RUTA_ARENA := "res://assets/texturas/arena/terreno_arena.tres"
+const RUTA_SHADER_MURALLA := "res://scripts/city/muralla_piedra.gdshader"
+const EXTENSIONES_IMAGEN := ["jpg", "jpeg", "png", "webp", "tga", "exr"]
 
 const CAPAS := [
 	"Buildings", "Castle", "Walls", "Docks", "Environment", "Market", "Props"
@@ -69,10 +119,14 @@ var _rng := RandomNumberGenerator.new()
 var _ruido_grande := FastNoiseLite.new()
 var _ruido_medio := FastNoiseLite.new()
 var _ruido_detalle := FastNoiseLite.new()
+var _ruido_erosion := FastNoiseLite.new()
 var _tierra := PackedVector2Array()
 
 var _arena: Material
+var _terreno: Material
+var _cache_suelo: Dictionary = {}
 var _piedra: Material
+var _muro: Material
 var _piedra_oscura: Material
 var _roca: Material
 var _teja: Material
@@ -82,6 +136,10 @@ var _agua: Material
 var _tela_roja: Material
 var _tela_ocre: Material
 var _tela_azul: Material
+
+var _meseta_xz := Vector2.ZERO
+var _meseta_y := 0.0
+var _meseta_lista := false
 
 
 # GENERACIÓN DE LA CIUDAD
@@ -117,6 +175,7 @@ func generar_ciudad() -> void:
 			hijo.free()
 
 	_rng.seed = semilla
+	_meseta_lista = false
 	_tierra = PackedVector2Array(CONTORNO)
 
 	_configurar_ruido()
@@ -125,6 +184,7 @@ func generar_ciudad() -> void:
 	print("Mundo Bonito: generando V3...")
 
 	_crear_terreno()
+	_crear_cordillera_lejana()
 	_crear_colina_castillo()
 	_crear_caminos()
 	_crear_murallas()
@@ -137,6 +197,9 @@ func generar_ciudad() -> void:
 
 	if generar_decoracion:
 		_decorar_rocas()
+
+	_esparcir_rocas_sierras()
+	_ajustar_luz_y_ambiente()
 
 	print("Mundo Bonito: V3.4 terminada.")
 
@@ -154,6 +217,10 @@ func _configurar_ruido() -> void:
 	_ruido_detalle.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	_ruido_detalle.frequency = 0.055
 
+	_ruido_erosion.seed = semilla + 1313
+	_ruido_erosion.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	_ruido_erosion.frequency = 1.0  # las escalas se controlan al llamar a _cresta()
+
 
 # MATERIALES
 
@@ -166,6 +233,86 @@ func _mat(color: Color, rugosidad: float = 0.9) -> StandardMaterial3D:
 	return m
 
 
+# CARGA AUTOMÁTICA DE TEXTURAS
+
+# Busca en una carpeta el primer archivo cuyo nombre contenga alguna de las
+# claves (en orden de prioridad). Funciona también en el juego exportado,
+# donde los archivos aparecen como "nombre.jpg.import".
+func _buscar_textura(
+	carpeta: String, claves: Array, excluir: Array = []
+) -> Texture2D:
+	if carpeta.is_empty() or not DirAccess.dir_exists_absolute(carpeta):
+		return null
+
+	var nombres: Array[String] = []
+	for archivo in DirAccess.get_files_at(carpeta):
+		var nombre := archivo.trim_suffix(".import")
+		if nombre.get_extension().to_lower() in EXTENSIONES_IMAGEN \
+				and not nombres.has(nombre):
+			nombres.append(nombre)
+
+	for clave: String in claves:
+		for nombre in nombres:
+			var minuscula := nombre.to_lower()
+			if not minuscula.contains(clave):
+				continue
+
+			var descartado := false
+			for malo: String in excluir:
+				if minuscula.contains(malo):
+					descartado = true
+					break
+			if descartado:
+				continue
+
+			var recurso := load(carpeta.path_join(nombre))
+			if recurso is Texture2D:
+				return recurso as Texture2D
+	return null
+
+
+func _buscar_color(carpeta: String) -> Texture2D:
+	return _buscar_textura(
+		carpeta, ["color", "albedo", "basecolor", "diffuse"]
+	)
+
+
+# El shader espera normal map estilo OpenGL (NormalGL), no DirectX.
+func _buscar_normal(carpeta: String) -> Texture2D:
+	return _buscar_textura(
+		carpeta, ["normalgl", "normal_gl", "normal"], ["normaldx", "normal_dx"]
+	)
+
+
+func _cargar_texturas_automaticas() -> void:
+	if not cargar_texturas_automaticamente:
+		return
+
+	if textura_roca_albedo == null:
+		textura_roca_albedo = _buscar_color(carpeta_roca)
+	if textura_roca_normal == null:
+		textura_roca_normal = _buscar_normal(carpeta_roca)
+
+	if textura_suelo_a_albedo == null:
+		textura_suelo_a_albedo = _buscar_color(carpeta_suelo_a)
+	if textura_suelo_a_normal == null:
+		textura_suelo_a_normal = _buscar_normal(carpeta_suelo_a)
+
+	if textura_suelo_b_albedo == null:
+		textura_suelo_b_albedo = _buscar_color(carpeta_suelo_b)
+	if textura_suelo_b_normal == null:
+		textura_suelo_b_normal = _buscar_normal(carpeta_suelo_b)
+
+	print(
+		"Texturas auto -> roca: ", textura_roca_albedo != null,
+		"/", textura_roca_normal != null,
+		" | suelo A: ", textura_suelo_a_albedo != null,
+		"/", textura_suelo_a_normal != null,
+		" | suelo B: ", textura_suelo_b_albedo != null,
+		"/", textura_suelo_b_normal != null
+	)
+
+
 func _preparar_materiales() -> void:
 	if material_arena != null:
 		_arena = material_arena
@@ -174,7 +321,19 @@ func _preparar_materiales() -> void:
 	else:
 		_arena = _mat(Color(0.76, 0.64, 0.46))
 
+	_cargar_texturas_automaticas()
+	_terreno = _crear_material_terreno()
+
 	_piedra = _mat(Color(0.72, 0.62, 0.47))
+
+	# Piedra con ladrillos para las murallas (si falta el shader, usa piedra lisa).
+	if ResourceLoader.exists(RUTA_SHADER_MURALLA):
+		var piedra_muro := ShaderMaterial.new()
+		piedra_muro.shader = load(RUTA_SHADER_MURALLA)
+		_muro = piedra_muro
+	else:
+		_muro = _piedra
+
 	_piedra_oscura = _mat(Color(0.54, 0.47, 0.37))
 	_roca = _mat(Color(0.49, 0.39, 0.29))
 	_teja = _mat(Color(0.47, 0.29, 0.20))
@@ -222,7 +381,6 @@ func _caja(
 		var caja := BoxShape3D.new()
 		caja.size = tamano
 		forma.shape = caja
-
 		cuerpo.add_child(forma)
 		nodo.add_child(cuerpo)
 
@@ -258,7 +416,6 @@ func _torre(
 		cilindro.radius = radio * 1.08
 		cilindro.height = altura
 		forma.shape = cilindro
-
 		cuerpo.add_child(forma)
 		nodo.add_child(cuerpo)
 
@@ -283,7 +440,6 @@ func _bloque_entre(
 		Vector3(ancho, grosor, direccion.length()),
 		material, colision
 	)
-
 	bloque.look_at(bloque.global_position - direccion, Vector3.UP)
 
 
@@ -329,11 +485,14 @@ func _triangulo_suelo(
 
 	for p in [a, b, c]:
 		var normal := Vector3.UP
+		var color := Color.WHITE
 		if es_desierto:
-			normal = _normal_desierto(p.x, p.z)
+			var datos: Array = _datos_suelo(p.x, p.y, p.z)
+			normal = datos[0]
+			color = datos[1]
 
 		st.set_normal(normal)
-		st.set_color(Color.WHITE)
+		st.set_color(color)
 		st.set_uv(Vector2(p.x, p.z) * 0.12)
 		st.add_vertex(p)
 
@@ -387,12 +546,11 @@ func _agregar_malla(
 			cuerpo.collision_layer = 1
 			var forma := CollisionShape3D.new()
 			forma.shape = concava
-
 			cuerpo.add_child(forma)
 			nodo.add_child(cuerpo)
 
 
-# COSTA, SIERRAS Y TERRENO
+# COSTA Y SIERRAS
 
 func _costa(z: float) -> float:
 	for i in range(4, 11):
@@ -415,7 +573,23 @@ func _eje_sierra(x: float, lado: float) -> float:
 	)
 
 
-func _altura_desierto(x: float, z: float) -> float:
+# Ruido de crestas afiladas: 1 - |ruido|, al cuadrado para estrechar las aristas.
+func _cresta(x: float, y: float, octavas: int = 4) -> float:
+	var suma := 0.0
+	var amplitud := 0.5
+	var px := x
+	var py := y
+	for i in range(octavas):
+		var n := 1.0 - absf(_ruido_erosion.get_noise_2d(px, py))
+		suma += amplitud * n * n
+		px = px * 2.07 + 11.3
+		py = py * 2.07 + 4.7
+		amplitud *= 0.5
+	return suma
+
+
+# Altura original del terreno (sin la meseta del castillo de montaña).
+func _altura_base(x: float, z: float) -> float:
 	var orilla := _costa(z) - x
 	if orilla < 0.0:
 		return maxf(nivel_mar_v25 - 8.0, orilla * 0.65)
@@ -434,14 +608,75 @@ func _altura_desierto(x: float, z: float) -> float:
 		var cima := 1.0 - smoothstep(0.0, 24.0, absf(d + 4.0 * detalle))
 		var agujas := pow(0.5 + 0.5 * sin(x * 0.039 + lado * 2.0 + ruido * 2.2), 2.0)
 		var segunda := 1.0 - smoothstep(0.0, 39.0, absf(d - 47.0 - 8.0 * ruido))
-		monte = altura_montanas_v25 * (
+
+		# Masa general (forma original).
+		var masa := altura_montanas_v25 * (
 			base * (1.45 + detalle * 0.28)
 			+ cima * (0.45 + agujas)
 			+ segunda * (1.25 + ruido)
 		)
-		monte *= smoothstep(32.0, 55.0, absf(z - 8.0))
+
+		# Compresión suave: redondea las cimas y evita paredes casi verticales.
+		var tope := altura_montanas_v25 * 1.8
+		masa = tope * (1.0 - exp(-masa / tope))
+
+		# Erosión moderada. Solo 2 octavas: más finas que ~4 celdas de malla
+		# producen escalones (aliasing). El detalle fino lo pone el shader.
+		var altura_rel := clampf(masa / tope, 0.0, 1.0)
+		if altura_rel > 0.06:
+			var dw := d + 14.0 * _ruido_detalle.get_noise_2d(x + 300.0, z)
+			var xw := x + 10.0 * _ruido_medio.get_noise_2d(x, z + 300.0)
+			var barrancos := _cresta(xw * 0.028, dw * 0.0085, 2) / 0.75
+			var fino := _cresta(xw * 0.035, dw * 0.020, 2) / 0.75
+			var talud := smoothstep(0.06, 0.40, altura_rel)
+			masa *= lerpf(1.0, 0.62 + 0.55 * barrancos, talud)
+			masa += altura_montanas_v25 * 0.07 * fino * talud
+
+			# Estratos: la roca sube en tramos con repisas casi planas.
+			# El ruido desplaza cada banda para que no sean todas iguales.
+			if estratos_montanas > 0.0:
+				var alto_banda := altura_montanas_v25 * 0.14
+				var q := (masa + 3.0 * detalle + 2.0 * ruido) / alto_banda
+				var entero := floorf(q)
+				var repisa := smoothstep(0.45, 0.95, q - entero)
+				var escalonada := (entero + repisa) * alto_banda - 3.0 * detalle - 2.0 * ruido
+				var aplicar := estratos_montanas * smoothstep(0.12, 0.30, altura_rel)
+				masa = lerpf(masa, maxf(escalonada, 0.0), aplicar)
+
+		monte = masa * smoothstep(32.0, 55.0, absf(z - 8.0))
 
 	return (monte + dunas) * smoothstep(0.0, 32.0, orilla)
+
+
+# Calcula dónde y a qué altura queda la meseta plana del castillo de montaña.
+func _preparar_meseta() -> void:
+	var lado := lado_castillo_montana
+	_meseta_xz = Vector2(
+		x_castillo_montana, _eje_sierra(x_castillo_montana, lado) + lado * 8.0
+	)
+	var suma := 0.0
+	for dir: Vector2 in DIRECCIONES_AO:
+		suma += _altura_base(
+			_meseta_xz.x + dir.x * radio_meseta * 0.6,
+			_meseta_xz.y + dir.y * radio_meseta * 0.6
+		)
+	_meseta_y = maxf(
+		suma / 8.0, _altura_base(_meseta_xz.x, _meseta_xz.y) * 0.85
+	)
+	_meseta_lista = true
+
+
+# Altura final del terreno: la base, con la meseta aplanada para el castillo.
+func _altura_desierto(x: float, z: float) -> float:
+	var h := _altura_base(x, z)
+	if not generar_castillo_montana or not generar_montanas_v25:
+		return h
+	if not _meseta_lista:
+		_preparar_meseta()
+
+	var d := Vector2(x, z).distance_to(_meseta_xz)
+	var w := 1.0 - smoothstep(radio_meseta, radio_meseta * 1.85, d)
+	return lerpf(h, _meseta_y, w)
 
 
 func _limites_sierras(oeste: float) -> void:
@@ -457,6 +692,14 @@ func _limites_sierras(oeste: float) -> void:
 		var x := oeste
 		while x < 160.0:
 			var fin := minf(x + 12.0, 160.0)
+
+			# Sin barrera invisible en el castillo de montaña: así se puede entrar.
+			if generar_castillo_montana \
+					and signf(lado) == signf(lado_castillo_montana) \
+					and absf(x + 6.0 - x_castillo_montana) < radio_meseta + 6.0:
+				x = fin
+				continue
+
 			var a := Vector3(x, 0.0, _eje_sierra(x, lado) - lado * 12.0)
 			var b := Vector3(fin, 0.0, _eje_sierra(fin, lado) - lado * 12.0)
 			var caja := BoxShape3D.new()
@@ -472,17 +715,19 @@ func _limites_sierras(oeste: float) -> void:
 
 
 func _normal_desierto(x: float, z: float) -> Vector3:
-	var muestra := 1.5
+	var muestra := maxf(1.5, paso_malla_v25 * 0.5)
 	var dx := (
 		_altura_desierto(x + muestra, z) - _altura_desierto(x - muestra, z)
 	) / (muestra * 2.0)
 	var dz := (
 		_altura_desierto(x, z + muestra) - _altura_desierto(x, z - muestra)
 	) / (muestra * 2.0)
+
 	return Vector3(-dx, 1.0, -dz).normalized()
 
 
 func _crear_desierto_dunas() -> void:
+	_cache_suelo.clear()
 	var filas := PackedFloat32Array()
 	var columnas := PackedFloat32Array()
 	var alcance := maxf(semiancho_valle_v25 * 1.7, 330.0)
@@ -522,19 +767,20 @@ func _crear_desierto_dunas() -> void:
 			_triangulo_suelo(st, a, b, c, true)
 			_triangulo_suelo(st, a, c, d, true)
 
-	_agregar_malla(_capa("Environment"), "CostaYValle", st.commit(), _arena, true)
+	_agregar_malla(_capa("Environment"), "CostaYValle", st.commit(), _terreno, true)
+	_cache_suelo.clear()
 
 
 func _fila_llegada(costa: float, oeste: float, t: float, z: float) -> Vector3:
-	var x := (
-		lerpf(costa, oeste, t) if t >= 0.0
-		else costa + maxf(40.0, -nivel_mar_v25 * 2.0 + 20.0)
-	)
+	var x := lerpf(costa, oeste, t) if t >= 0.0 else costa + maxf(40.0, -nivel_mar_v25 * 2.0 + 20.0)
 	return Vector3(x, _altura_desierto(x, z), z)
 
 
+# TERRENO, MATERIAL DE LAS MONTAÑAS Y MAR
+
 func _crear_terreno() -> void:
 	var entorno := _capa("Environment")
+
 	_crear_desierto_dunas()
 
 	var mar_mesh := PlaneMesh.new()
@@ -552,6 +798,427 @@ func _crear_terreno() -> void:
 
 	if cielo_costero:
 		_preparar_cielo_costero()
+
+
+# DATOS DE VÉRTICE DEL TERRENO (normal + oclusión + curvatura)
+
+const DIRECCIONES_AO := [
+	Vector2(1.0, 0.0), Vector2(0.7071, 0.7071),
+	Vector2(0.0, 1.0), Vector2(-0.7071, 0.7071),
+	Vector2(-1.0, 0.0), Vector2(-0.7071, -0.7071),
+	Vector2(0.0, -1.0), Vector2(0.7071, -0.7071)
+]
+
+
+# Cada vértice se comparte entre ~6 triángulos: se calcula una sola vez.
+func _datos_suelo(x: float, y: float, z: float) -> Array:
+	var clave := Vector2(x, z)
+	if _cache_suelo.has(clave):
+		return _cache_suelo[clave]
+
+	var datos := [_normal_desierto(x, z), _color_suelo(x, z, y)]
+	_cache_suelo[clave] = datos
+	return datos
+
+
+# Canal R = oclusión ambiental falsa (1 = abierto, 0 = muy tapado).
+# Canal G = curvatura (0.5 plano, > 0.5 cresta, < 0.5 barranco).
+func _color_suelo(x: float, z: float, h0: float) -> Color:
+	var oclusion := 0.0
+	var suma_cerca := 0.0
+
+	for dir: Vector2 in DIRECCIONES_AO:
+		var hc := _altura_desierto(x + dir.x * 10.0, z + dir.y * 10.0)
+		var hl := _altura_desierto(x + dir.x * 30.0, z + dir.y * 30.0)
+		suma_cerca += hc
+		oclusion += (
+			0.6 * clampf((hc - h0) / 10.0, 0.0, 1.5)
+			+ 0.4 * clampf((hl - h0) / 30.0, 0.0, 1.5)
+		)
+
+	oclusion /= 8.0 * 1.5
+	var ao := 1.0 - clampf(oclusion * 1.6, 0.0, 0.9)
+	var curvatura := clampf(0.5 + (h0 - suma_cerca / 8.0) / 8.0, 0.0, 1.0)
+	return Color(ao, curvatura, 0.0, 1.0)
+
+
+# Un solo material para arena + roca. Toma la textura de tu material de arena.
+func _crear_material_terreno() -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = preload("res://scripts/city/terreno_sierras.gdshader")
+
+	var estandar := _arena as StandardMaterial3D
+	if estandar != null:
+		m.set_shader_parameter("color_arena", estandar.albedo_color)
+		m.set_shader_parameter(
+			"escala_uv_arena", Vector2(estandar.uv1_scale.x, estandar.uv1_scale.y)
+		)
+		if estandar.albedo_texture != null:
+			m.set_shader_parameter("textura_arena", estandar.albedo_texture)
+			m.set_shader_parameter("usar_textura_arena", true)
+
+	m.set_shader_parameter("escala_suelo_a", escala_suelo_a)
+	m.set_shader_parameter("escala_suelo_b", escala_suelo_b)
+	m.set_shader_parameter("cobertura_suelo_base", cobertura_suelo_base)
+	if textura_suelo_a_albedo != null:
+		m.set_shader_parameter("textura_suelo_a", textura_suelo_a_albedo)
+		m.set_shader_parameter("usar_suelo_a", true)
+	if textura_suelo_a_normal != null:
+		m.set_shader_parameter("normal_suelo_a", textura_suelo_a_normal)
+		m.set_shader_parameter("usar_normal_suelo_a", true)
+	if textura_suelo_b_albedo != null:
+		m.set_shader_parameter("textura_suelo_b", textura_suelo_b_albedo)
+		m.set_shader_parameter("usar_suelo_b", true)
+	if textura_suelo_b_normal != null:
+		m.set_shader_parameter("normal_suelo_b", textura_suelo_b_normal)
+		m.set_shader_parameter("usar_normal_suelo_b", true)
+
+	m.set_shader_parameter("escala_textura_roca", escala_textura_roca)
+	if textura_roca_albedo != null:
+		m.set_shader_parameter("textura_roca", textura_roca_albedo)
+		m.set_shader_parameter("usar_textura_roca", true)
+	if textura_roca_normal != null:
+		m.set_shader_parameter("normal_roca", textura_roca_normal)
+		m.set_shader_parameter("usar_normal_roca", true)
+	return m
+
+
+# ROCAS Y PEÑASCOS EN LAS SIERRAS (MultiMesh)
+
+func _esparcir_rocas_sierras() -> void:
+	if not generar_rocas_sierras or not generar_montanas_v25:
+		return
+
+	var padre := _capa("Props")
+	var material := _material_rocas()
+	var azar := RandomNumberGenerator.new()
+	azar.seed = semilla + 7
+
+	var variantes := 3
+	var transformaciones: Array = []
+	var colores: Array = []
+	for v in range(variantes):
+		transformaciones.append([])
+		colores.append([])
+
+	var fondo := 145.0 + longitud_camino_llegada + fondo_escenico
+	var alcance := maxf(semiancho_valle_v25 * 1.7, 330.0)
+	var paso := 5.0
+	var nx := int((fondo + 110.0) / paso)
+	var nz := int(2.0 * alcance / paso)
+	var total := 0
+
+	for i in range(nx):
+		for j in range(nz):
+			if total >= maximo_rocas:
+				break
+
+			var px := -fondo + (float(i) + azar.randf()) * paso
+			var pz := -alcance + (float(j) + azar.randf()) * paso
+
+			if px > _costa(pz) - 12.0:
+				continue
+			if px < -140.0 and absf(pz - 8.0) < 12.0:
+				continue
+
+			var h := _altura_desierto(px, pz)
+			if h < 1.5:
+				continue
+
+			# Más rocas en laderas medias y al pie de la montaña (escombros).
+			var normal := _normal_desierto(px, pz)
+			var angulo := rad_to_deg(acos(clampf(normal.y, -1.0, 1.0)))
+			var prob := smoothstep(8.0, 22.0, angulo) * (1.0 - smoothstep(55.0, 70.0, angulo))
+			prob *= smoothstep(1.5, 6.0, h)
+			prob *= 0.35 + 0.65 * (1.0 - smoothstep(10.0, 45.0, h))
+			prob *= densidad_rocas * 0.35
+			if azar.randf() > prob:
+				continue
+
+			# Muchas piedras pequeñas y pocos peñascos grandes.
+			var tamano := lerpf(0.7, 4.5, pow(azar.randf(), 3.0)) * tamano_rocas
+			var escala := Vector3(
+				tamano * azar.randf_range(0.8, 1.3),
+				tamano * azar.randf_range(0.6, 1.0),
+				tamano * azar.randf_range(0.8, 1.3)
+			)
+			var eje := Vector3.UP.slerp(normal, 0.35)
+			var base := Basis(Quaternion(Vector3.UP, eje))
+			base = base * Basis(Vector3.UP, azar.randf() * TAU)
+			base = base * Basis.from_scale(escala)
+
+			# Se apoya en el punto más bajo de su huella y queda medio enterrada,
+			# así no flota en las pendientes.
+			var radio_roca := maxf(escala.x, escala.z)
+			var suelo_min := h
+			for dir: Vector2 in DIRECCIONES_AO:
+				suelo_min = minf(
+					suelo_min,
+					_altura_desierto(px + dir.x * radio_roca, pz + dir.y * radio_roca)
+				)
+			var posicion := Vector3(px, suelo_min + 0.1 * escala.y, pz)
+
+			var mezcla := clampf(h / 40.0 + azar.randf_range(-0.2, 0.2), 0.0, 1.0)
+			var tinte := Color(0.80, 0.58, 0.40).lerp(Color(0.60, 0.32, 0.20), mezcla)
+			var brillo := azar.randf_range(0.9, 1.2)
+			tinte = Color(tinte.r * brillo, tinte.g * brillo, tinte.b * brillo)
+			if textura_roca_albedo != null:
+				# La textura oscurece al multiplicar; se compensa aclarando el tinte.
+				tinte = tinte.lerp(Color.WHITE, 0.3)
+				tinte = Color(tinte.r * 1.25, tinte.g * 1.25, tinte.b * 1.25)
+
+			var variante := azar.randi() % variantes
+			transformaciones[variante].append(Transform3D(base, posicion))
+			colores[variante].append(tinte)
+			total += 1
+
+	for v in range(variantes):
+		var lista: Array = transformaciones[v]
+		if lista.is_empty():
+			continue
+
+		var multimalla := MultiMesh.new()
+		multimalla.transform_format = MultiMesh.TRANSFORM_3D
+		multimalla.use_colors = true
+		multimalla.mesh = _malla_roca(semilla + 100 + v)
+		multimalla.instance_count = lista.size()
+		for k in range(lista.size()):
+			multimalla.set_instance_transform(k, lista[k])
+			multimalla.set_instance_color(k, colores[v][k])
+
+		var nodo := MultiMeshInstance3D.new()
+		nodo.name = "RocasSierra_%d" % v
+		nodo.multimesh = multimalla
+		nodo.material_override = material
+		padre.add_child(nodo)
+
+	print("Rocas en las sierras: ", total)
+
+
+func _material_rocas() -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = Color.WHITE
+	m.roughness = 0.95
+	if textura_roca_albedo != null:
+		m.albedo_texture = textura_roca_albedo
+		m.uv1_triplanar = true
+		m.uv1_world_triplanar = true
+		m.uv1_scale = Vector3.ONE * escala_textura_roca
+	if textura_roca_normal != null:
+		m.normal_enabled = true
+		m.normal_texture = textura_roca_normal
+	return m
+
+
+# Peñasco low-poly: esfera achatada con radios irregulares, caras planas.
+func _malla_roca(semilla_roca: int) -> ArrayMesh:
+	var azar := RandomNumberGenerator.new()
+	azar.seed = semilla_roca
+
+	var anillos := 7
+	var segmentos := 11
+	var achatado := azar.randf_range(0.6, 0.9)
+	var radio_polo_alto := azar.randf_range(0.75, 0.95)
+	var radio_polo_bajo := azar.randf_range(0.75, 0.95)
+	var fase_a := azar.randf() * TAU
+	var fase_b := azar.randf() * TAU
+	var rejilla: Array = []
+
+	for i in range(anillos + 1):
+		var fila: Array = []
+		var phi := PI * float(i) / float(anillos)
+		for j in range(segmentos):
+			var theta := TAU * float(j) / float(segmentos)
+			# Forma general ondulada + irregularidad por vértice.
+			var radio := (
+				1.0
+				+ 0.16 * sin(theta * 2.0 + fase_a + phi * 1.5)
+				+ 0.10 * sin(theta * 3.0 + fase_b - phi * 2.0)
+				+ azar.randf_range(-0.12, 0.12)
+			)
+			if i == 0:
+				radio = radio_polo_alto
+			elif i == anillos:
+				radio = radio_polo_bajo
+			fila.append(Vector3(
+				sin(phi) * cos(theta),
+				cos(phi) * achatado,
+				sin(phi) * sin(theta)
+			) * radio)
+		rejilla.append(fila)
+
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(anillos):
+		for j in range(segmentos):
+			var k := (j + 1) % segmentos
+			var a: Vector3 = rejilla[i][j]
+			var b: Vector3 = rejilla[i][k]
+			var c: Vector3 = rejilla[i + 1][k]
+			var d: Vector3 = rejilla[i + 1][j]
+			_cara_roca(st, a, b, c)
+			_cara_roca(st, a, c, d)
+
+	# Normales suavizadas: la roca se ve redondeada y natural, no facetada.
+	st.generate_normals()
+	return st.commit()
+
+
+func _cara_roca(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+	var cruz := (b - a).cross(c - a)
+	if cruz.length_squared() < 0.000001:
+		return
+
+	# Godot dibuja de frente las caras en sentido horario vistas desde fuera,
+	# o sea, el producto cruz debe apuntar hacia dentro.
+	if cruz.dot((a + b + c) / 3.0) > 0.0:
+		var tmp := b
+		b = c
+		c = tmp
+
+	for p in [a, b, c]:
+		st.add_vertex(p)
+
+
+# CORDILLERA LEJANA (capas de siluetas detrás de las sierras)
+
+func _tono(color: Color, factor: float) -> Color:
+	return Color(color.r * factor, color.g * factor, color.b * factor, 1.0)
+
+
+func _vertice_color(st: SurfaceTool, punto: Vector3, color: Color) -> void:
+	st.set_color(color)
+	st.add_vertex(punto)
+
+
+# Arcos de montañas sin colisión que rodean el valle por el oeste, norte y sur.
+# Cada capa es más alta y más clara que la anterior; la niebla hace el resto.
+func _crear_cordillera_lejana() -> void:
+	if not generar_cordillera or not generar_montanas_v25:
+		return
+
+	var padre := _capa("Environment")
+	var fondo := 145.0 + longitud_camino_llegada + fondo_escenico
+	var alcance := maxf(semiancho_valle_v25 * 1.7, 330.0)
+	var centro := Vector2(-200.0, 0.0)
+	var haze := Color(0.80, 0.68, 0.56)
+	var color_roca := Color(0.58, 0.31, 0.20)
+	var muestras := 220
+
+	# Perfil de cada cresta: base, falda, cima, falda, base.
+	var perfil: Array[float] = [-0.5, -0.25, 0.0, 0.25, 0.5]
+	var relativa: Array[float] = [0.0, 0.45, 1.0, 0.45, 0.0]
+	var tonos: Array[float] = [0.72, 0.95, 1.15, 0.95, 0.72]
+
+	for capa in range(capas_cordillera):
+		var k := float(capa)
+		var semi_x := fondo + 240.0 * k
+		var semi_z := alcance + 130.0 + 190.0 * k
+		var profundidad := 240.0 + 70.0 * k
+		var theta_min := acos(clampf((60.0 - centro.x) / semi_x, 0.0, 0.95))
+		var theta_max := TAU - theta_min
+		var base_color := color_roca.lerp(haze, 0.30 + 0.22 * k)
+
+		var rejilla: Array = []
+		for i in range(muestras + 1):
+			var t := float(i) / float(muestras)
+			var theta := lerpf(theta_min, theta_max, t)
+			var c := cos(theta)
+			var s := sin(theta)
+			var punto := centro + Vector2(c * semi_x, s * semi_z)
+			var hacia_fuera := Vector2(c / semi_x, s / semi_z).normalized()
+
+			var cresta_n := _cresta(float(i) * 0.05 + k * 13.0, k * 3.7 + 0.5, 4) / 0.875
+			var altura := altura_cordillera * (1.0 + 0.3 * k) * (0.4 + 0.8 * cresta_n)
+			altura *= smoothstep(0.0, 0.1, t) * (1.0 - smoothstep(0.9, 1.0, t))
+
+			var fila: Array = []
+			for r in range(5):
+				var p2: Vector2 = punto + hacia_fuera * perfil[r] * profundidad
+				var y := -12.0
+				if r > 0 and r < 4:
+					y = altura * relativa[r]
+				fila.append(Vector3(p2.x, y, p2.y))
+			rejilla.append(fila)
+
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for i in range(muestras):
+			for r in range(4):
+				var a: Vector3 = rejilla[i][r]
+				var b: Vector3 = rejilla[i + 1][r]
+				var c2: Vector3 = rejilla[i + 1][r + 1]
+				var d: Vector3 = rejilla[i][r + 1]
+				var col_abajo := _tono(base_color, tonos[r])
+				var col_arriba := _tono(base_color, tonos[r + 1])
+
+				_vertice_color(st, a, col_abajo)
+				_vertice_color(st, b, col_abajo)
+				_vertice_color(st, c2, col_arriba)
+				_vertice_color(st, a, col_abajo)
+				_vertice_color(st, c2, col_arriba)
+				_vertice_color(st, d, col_arriba)
+
+		st.generate_normals()
+
+		var material := StandardMaterial3D.new()
+		material.vertex_color_use_as_albedo = true
+		material.roughness = 1.0
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+		var nodo := MeshInstance3D.new()
+		nodo.name = "Cordillera_%d" % capa
+		nodo.mesh = st.commit()
+		nodo.material_override = material
+		nodo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		padre.add_child(nodo)
+
+
+# LUZ Y AMBIENTE
+
+func _ajustar_luz_y_ambiente() -> void:
+	if not ajustar_luz_y_ambiente:
+		return
+
+	var escena := get_parent()
+	if escena == null:
+		return
+
+	# Sol bajo y lateral: sombras largas que revelan barrancos y crestas.
+	var luces := escena.find_children("*", "DirectionalLight3D", true, false)
+	if not luces.is_empty():
+		var sol := luces[0] as DirectionalLight3D
+		sol.rotation_degrees = Vector3(-elevacion_sol, azimut_sol, 0.0)
+		sol.light_color = Color(1.0, 0.86, 0.68)
+		sol.light_energy = energia_sol
+		sol.shadow_enabled = true
+		sol.directional_shadow_max_distance = 900.0
+		sol.directional_shadow_blend_splits = true
+
+	var mundo := escena.get_node_or_null("WorldEnvironment") as WorldEnvironment
+	if mundo != null and mundo.environment != null:
+		var amb := mundo.environment
+		amb.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		amb.ssao_enabled = true
+		amb.ssao_radius = 6.0
+		amb.ssao_intensity = 2.0
+		amb.glow_enabled = true
+		amb.glow_intensity = 0.35
+		amb.glow_hdr_threshold = 1.1
+		amb.adjustment_enabled = true
+		amb.adjustment_contrast = 1.08
+		amb.adjustment_saturation = 1.1
+
+		# Niebla de calima: aclara y enfría lo lejano, da profundidad a las sierras.
+		amb.fog_enabled = activar_niebla
+		if activar_niebla:
+			amb.fog_light_color = Color(0.86, 0.80, 0.70)
+			amb.fog_light_energy = 1.0
+			amb.fog_sun_scatter = 0.2
+			amb.fog_density = densidad_niebla
+			amb.fog_aerial_perspective = perspectiva_aerea
+			amb.fog_sky_affect = 0.25
 
 
 func _preparar_cielo_costero() -> void:
@@ -594,6 +1261,7 @@ func _crear_colina_castillo() -> void:
 
 	for nivel in range(radios.size()):
 		var anillo := PackedVector3Array()
+
 		for i in range(lados):
 			var angulo := (float(i) / float(lados)) * TAU
 			var irregularidad := (
@@ -612,7 +1280,6 @@ func _crear_colina_castillo() -> void:
 				y,
 				CENTRO_CASTILLO.y + sin(angulo) * radio
 			))
-
 		anillos.append(anillo)
 
 	var st := SurfaceTool.new()
@@ -632,6 +1299,7 @@ func _crear_colina_castillo() -> void:
 
 	var borde: PackedVector3Array = anillos[anillos.size() - 1]
 	var centro := Vector3(CENTRO_CASTILLO.x, altura_castillo, CENTRO_CASTILLO.y)
+
 	for i in range(lados):
 		var siguiente := (i + 1) % lados
 		_triangulo(st, centro, borde[i], borde[siguiente])
@@ -644,6 +1312,7 @@ func _crear_colina_castillo() -> void:
 
 func _crear_caminos() -> void:
 	var entorno := _capa("Environment")
+
 	_segmento(
 		entorno, "CaminoDelDesierto",
 		Vector2(-145.0 - longitud_camino_llegada, 8), Vector2(-145, 8),
@@ -667,12 +1336,13 @@ func _crear_caminos() -> void:
 	]
 	for i in range(puntos.size() - 1):
 		_bloque_entre(
-			entorno, "RampaCastillo_%02d" % i, puntos[i], puntos[i + 1],
-			6.0, 0.65, _piedra, true
+			entorno, "RampaCastillo_%02d" % i,
+			puntos[i], puntos[i + 1], 6.0, 0.65, _piedra, true
 		)
 
 
 # MURALLAS Y CASTILLO
+# El generador de ciudad ampliada redefine _crear_murallas().
 
 func _crear_murallas() -> void:
 	var padre := _capa("Walls")
@@ -684,19 +1354,133 @@ func _crear_murallas() -> void:
 		[Vector2(48, 108), Vector2(82, 91)]
 	]
 
+	var altura_muro := 9.0
+	var grosor := 3.5
+	var almenas: Array[Transform3D] = []
+	var torres: Array[Dictionary] = []
+
+	# Torres de la puerta primero, para que las demás las respeten.
+	var puerta: Array[Vector2] = [Vector2(-146.0, -9.5), Vector2(-146.0, 25.5)]
+	for p in puerta:
+		torres.append({"pos": p, "yaw": 0.0, "lado": 9.0, "alto": 16.0})
+
 	for i in range(tramos.size()):
+		var a: Vector2 = tramos[i][0]
+		var b: Vector2 = tramos[i][1]
+		var yaw := atan2(b.x - a.x, b.y - a.y)
+
+		# Zócalo más ancho en la base y muro con cimiento enterrado.
 		_segmento(
-			padre, "Muralla_%02d" % i, tramos[i][0], tramos[i][1],
-			3.5, 9.0, _piedra
+			padre, "ZocaloMuralla_%02d" % i, a, b,
+			grosor + 1.2, 3.0, _muro, -1.0, false
+		)
+		_segmento(
+			padre, "Muralla_%02d" % i, a, b,
+			grosor, altura_muro + 3.0, _muro, -3.0
 		)
 
-	for z in [-7.0, 23.0]:
-		_torre(padre, "TorrePuerta", Vector3(-146, 6.5, z), 5.5, 13.0, _piedra)
+		# Almenas en ambos bordes del adarve.
+		_agregar_almenas(almenas, a, b, altura_muro + 0.8, grosor * 0.5 - 0.5, 2.8)
+		_agregar_almenas(almenas, a, b, altura_muro + 0.8, -(grosor * 0.5 - 0.5), 2.8)
 
+		# Una torre cada ~42 m, sin pisar las de la puerta ni las ya puestas.
+		var n := maxi(1, ceili(a.distance_to(b) / 42.0))
+		for k in range(n + 1):
+			var punto := a.lerp(b, float(k) / float(n))
+			var libre := true
+			for t in torres:
+				var otra: Vector2 = t["pos"]
+				if punto.distance_to(otra) < 14.0:
+					libre = false
+					break
+			if libre:
+				torres.append({"pos": punto, "yaw": yaw, "lado": 7.0, "alto": 14.0})
+
+	for i in range(torres.size()):
+		var t: Dictionary = torres[i]
+		var pos: Vector2 = t["pos"]
+		var lado: float = t["lado"]
+		var alto: float = t["alto"]
+		var yaw: float = t["yaw"]
+
+		var torre := _caja(
+			padre, "TorreMuralla_%02d" % i,
+			Vector3(pos.x, (alto - 3.0) * 0.5, pos.y),
+			Vector3(lado, alto + 3.0, lado), _muro
+		)
+		torre.rotation.y = yaw
+
+		# Almenas en los cuatro bordes de la terraza de la torre.
+		var h := lado * 0.5 - 0.5
+		var esquinas: Array[Vector2] = []
+		for signo in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			esquinas.append(pos + _girar(Vector2(signo.x * h, signo.y * h), yaw))
+		for j in range(4):
+			_agregar_almenas(almenas, esquinas[j], esquinas[(j + 1) % 4], alto + 0.8, 0.0, 2.4)
+
+	# Dintel de la puerta entre las dos torres, con almenas.
 	_segmento(
 		padre, "DintelPuerta", Vector2(-146, -5), Vector2(-146, 21),
-		4.0, 2.0, _piedra, 8.5
+		4.0, 3.0, _muro, 10.0
 	)
+	_agregar_almenas(almenas, Vector2(-146, -5), Vector2(-146, 21), 13.8, 1.5, 2.8)
+	_agregar_almenas(almenas, Vector2(-146, -5), Vector2(-146, 21), 13.8, -1.5, 2.8)
+
+	_crear_almenas(padre, almenas)
+
+
+func _girar(v: Vector2, yaw: float) -> Vector2:
+	return Vector2(
+		v.x * cos(yaw) + v.y * sin(yaw),
+		-v.x * sin(yaw) + v.y * cos(yaw)
+	)
+
+
+# Coloca almenas repartidas a lo largo de a -> b, desplazadas hacia un lado.
+func _agregar_almenas(
+	lista: Array[Transform3D],
+	a: Vector2,
+	b: Vector2,
+	y: float,
+	desplazamiento: float,
+	paso: float
+) -> void:
+	var d := b - a
+	var largo := d.length()
+	if largo < 1.0:
+		return
+
+	var u := d / largo
+	var perpendicular := Vector2(-u.y, u.x)
+	var yaw := atan2(u.x, u.y)
+	var cantidad := maxi(1, int(largo / paso))
+
+	for k in range(cantidad):
+		var t := (float(k) + 0.5) / float(cantidad)
+		var p := a + u * largo * t + perpendicular * desplazamiento
+		lista.append(Transform3D(Basis(Vector3.UP, yaw), Vector3(p.x, y, p.y)))
+
+
+# Todas las almenas en un solo MultiMesh (una sola llamada de dibujo).
+func _crear_almenas(padre: Node3D, lista: Array[Transform3D]) -> void:
+	if lista.is_empty():
+		return
+
+	var malla := BoxMesh.new()
+	malla.size = Vector3(1.6, 2.6, 2.2)
+
+	var multimalla := MultiMesh.new()
+	multimalla.transform_format = MultiMesh.TRANSFORM_3D
+	multimalla.mesh = malla
+	multimalla.instance_count = lista.size()
+	for i in range(lista.size()):
+		multimalla.set_instance_transform(i, lista[i])
+
+	var nodo := MultiMeshInstance3D.new()
+	nodo.name = "Almenas"
+	nodo.multimesh = multimalla
+	nodo.material_override = _muro
+	padre.add_child(nodo)
 
 
 func _crear_castillo() -> void:
@@ -736,6 +1520,7 @@ func _crear_castillo() -> void:
 
 func _crear_plaza() -> void:
 	var padre := _capa("Market")
+
 	_caja(
 		padre, "SueloPlaza", Vector3(CENTRO_PLAZA.x, 0.05, CENTRO_PLAZA.y),
 		Vector3(48, 0.12, 38), _piedra, false
@@ -784,12 +1569,9 @@ func _extremo_paseo(lado: float) -> float:
 	for paso in range(300):
 		var siguiente := z + lado
 		var x := _costa(siguiente) + 5.0
-		# El muro invisible queda a 12 unidades del eje de la sierra.
-		# Se reservan otras 8 para la cubierta.
 		if absf(siguiente) + 20.0 >= absf(_eje_sierra(x, lado)):
 			break
 		z = siguiente
-
 	return z
 
 
@@ -870,7 +1652,6 @@ func _ala_puerto(
 	st.generate_tangents()
 	_agregar_malla(padre, "Paseo" + nombre, st.commit(), material, true)
 
-	# El rompeolas parte desde el extremo de esta ala y se curva hacia la boca.
 	var inicio := Vector2(anterior.x, extremo)
 	var boca := Vector2(244.0, 6.0 + lado * 36.0)
 	var control := Vector2(boca.x + 22.0, extremo)
@@ -904,7 +1685,6 @@ func _crear_puerto() -> void:
 
 	padre.add_child(muelle)
 
-	# El paseo nuevo toma la altura, el ancho y el material de tu escena.
 	var cubierta := muelle.get_node("Paseo/Cubierta") as MeshInstance3D
 	var caja := cubierta.mesh as BoxMesh
 	var material := cubierta.get_active_material(0)
@@ -930,6 +1710,7 @@ func _crear_puerto() -> void:
 func _crear_barco(padre: Node3D, numero: int, posicion: Vector2) -> void:
 	var x := posicion.x
 	var z := posicion.y
+
 	_caja(
 		padre, "CascoBarco_%d" % numero, Vector3(x, -2.0, z),
 		Vector3(4.0, 1.5, 11.0), _madera, false
@@ -1013,7 +1794,7 @@ func _crear_casa(numero: int, posicion: Vector2) -> void:
 		)
 
 
-# DISTRIBUCIÓN RESIDENCIAL
+# DISTRIBUCIÓN RESIDENCIAL DE LA BASE
 
 func _distancia_segmento(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var d := b - a
@@ -1053,12 +1834,10 @@ func _lote_valido(p: Vector2) -> bool:
 		return false
 
 	var rampa := [
-		Vector2(-45, -10),
-		Vector2(-39, -42),
-		Vector2(-35, -78),
-		Vector2(-62, -94),
-		Vector2(-73, -63)
+		Vector2(-45, -10), Vector2(-39, -42), Vector2(-35, -78),
+		Vector2(-62, -94), Vector2(-73, -63)
 	]
+
 	for i in range(rampa.size() - 1):
 		if _distancia_segmento(p, rampa[i], rampa[i + 1]) < 12.0:
 			return false

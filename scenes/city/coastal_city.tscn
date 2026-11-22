@@ -5,28 +5,72 @@
 [ext_resource type="Script" uid="uid://cpfh6gn4cecjg" path="res://scripts/city/coastal_town_generator.gd" id="2_3cey1"]
 [ext_resource type="Script" uid="uid://ccpmbkg1bpcb8" path="res://scripts/city/wake_up_controller.gd" id="3_he8rr"]
 [ext_resource type="Script" uid="uid://bgjf3h6qvv00h" path="res://scripts/city/mercado_muelle.gd" id="3_txapd"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_3cey1"]
-sky_top_color = Color(0.4117647, 0.5882353, 0.7137255, 1)
-sky_horizon_color = Color(0.92941177, 0.84313726, 0.70980394, 1)
-ground_bottom_color = Color(0.57254905, 0.46666667, 0.34117648, 1)
-ground_horizon_color = Color(0.92941177, 0.84313726, 0.70980394, 1)
-
-[sub_resource type="Sky" id="Sky_txapd"]
-sky_material = SubResource("ProceduralSkyMaterial_3cey1")
-
-[sub_resource type="Environment" id="Environment_nvtj0"]
-background_mode = 2
-sky = SubResource("Sky_txapd")
+[ext_resource type="Texture2D" uid="uid://cb6d1ldpmndcw" path="res://assets/texturas/roca montañas/Rock061_2K-JPG_Color.jpg" id="3_yg0ts"]
+[ext_resource type="Texture2D" uid="uid://bmccyowub2ubc" path="res://assets/texturas/roca montañas/Rock061_2K-JPG_NormalGL.jpg" id="4_jcny0"]
+[ext_resource type="Texture2D" uid="uid://denotq538lfst" path="res://assets/texturas/arena linda/Ground054_2K-JPG_Color.jpg" id="5_ejdax"]
+[ext_resource type="Texture2D" uid="uid://dr4kgfyq6fgau" path="res://assets/texturas/arena linda/Ground054_2K-JPG_NormalGL.jpg" id="6_aab3w"]
+[ext_resource type="Texture2D" uid="uid://dcknfo1micqku" path="res://assets/texturas/mas arena/Ground029_2K-JPG_Color.jpg" id="7_rruwo"]
+[ext_resource type="Texture2D" uid="uid://rglg0hoxxh2h" path="res://assets/texturas/mas arena/Ground029_2K-JPG_NormalGL.jpg" id="8_x72yn"]
+[ext_resource type="PackedScene" uid="uid://yglc0vybuj4v" path="res://addons/scenes/menus/menu_pausa.tscn" id="13_ejdax"]
+[ext_resource type="PackedScene" uid="uid://b1p22lqlnl6y5" path="res://addons/scenes/world/world_environment.tscn" id="13_rruwo"]
+[ext_resource type="Script" uid="uid://cjqbfyg6heyfw" path="res://ciclo_dia.gd" id="14_x72yn"]
+[ext_resource type="Script" uid="uid://dsjxomloj63jf" path="res://scripts/ui/pantalla_muerte.gd" id="15_atnm3"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_o3ss8"]
 size = Vector3(1200, 0.4, 1200)
+
+[sub_resource type="Animation" id="Animation_cdqbm"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("DirectionalLight3D:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_imku0"]
+resource_name = "ciclo"
+length = 1440.0
+loop_mode = 2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("DirectionalLight3D:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(-89.600006, 1440),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(-6.2831855, 0, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_ihuss"]
+_data = {
+&"RESET": SubResource("Animation_cdqbm"),
+&"ciclo": SubResource("Animation_imku0")
+}
 
 [node name="CoastalCity" type="Node3D" unique_id=985624665]
 script = ExtResource("1_o6lbb")
 
 [node name="CityJsonGenerator" type="Node3D" parent="." unique_id=546221959]
 script = ExtResource("2_3cey1")
+paso_malla_v25 = 8.0
+textura_roca_albedo = ExtResource("3_yg0ts")
+textura_roca_normal = ExtResource("4_jcny0")
+textura_suelo_a_albedo = ExtResource("5_ejdax")
+textura_suelo_a_normal = ExtResource("6_aab3w")
+textura_suelo_b_albedo = ExtResource("7_rruwo")
+textura_suelo_b_normal = ExtResource("8_x72yn")
+x_castillo_montana = -250.0
+radio_meseta = 26.0
 
 [node name="GeneratedCity" type="Node3D" parent="CityJsonGenerator" unique_id=668037103]
 
@@ -116,11 +160,6 @@ script = ExtResource("3_he8rr")
 [node name="WakeCamera" type="Camera3D" parent="WakeUpController" unique_id=1953607565]
 fov = 70.0
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=577072642]
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=256938144]
-environment = SubResource("Environment_nvtj0")
-
 [node name="Jugador" parent="." unique_id=81560032 instance=ExtResource("1_wnsmk")]
 
 [node name="TutorialControles" parent="Jugador" index="3" unique_id=399541173]
@@ -131,5 +170,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GroundSafety" unique_id=1655355703]
 shape = SubResource("BoxShape3D_o3ss8")
+
+[node name="MenuPausa" parent="." unique_id=1160718712 instance=ExtResource("13_ejdax")]
+
+[node name="WorldEnvironment2" parent="." unique_id=2143519807 instance=ExtResource("13_rruwo")]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2084261960]
+shadow_enabled = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=666221403]
+root_node = NodePath("../DirectionalLight3D")
+libraries/ = SubResource("AnimationLibrary_ihuss")
+autoplay = &"ciclo"
+script = ExtResource("14_x72yn")
+
+[node name="PantallaMuerte" type="CanvasLayer" parent="." unique_id=1410116249]
+script = ExtResource("15_atnm3")
 
 [editable path="Jugador"]
