@@ -546,7 +546,7 @@ func _lote_valido(p: Vector2) -> bool:
 			if generar_montanas_v25 and absf(z) >= absf(_eje_sierra(x, signf(z))) - (DISTANCIA_MURO_SIERRA + 10.0):
 				return false
 
-			if absf(_altura_desierto(x, z) - altura) > 0.55:
+			if absf(_altura_desierto(p.x + dx * 0.65, p.y + dz * 0.65) - altura) > 1.15:
 				return false
 
 	return true

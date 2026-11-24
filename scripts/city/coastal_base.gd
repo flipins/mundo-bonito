@@ -4,7 +4,7 @@ extends Node3D
 # Ciudad costera con valle occidental y bahía al este.
 
 @export_group("Ciudad")
-@export_range(0, 50, 1) var cantidad_casas: int = 36
+@export_range(0, 180, 1) var cantidad_casas: int = 112
 @export var semilla: int = 2026
 @export var generar_colisiones: bool = true
 @export var generar_casas: bool = true

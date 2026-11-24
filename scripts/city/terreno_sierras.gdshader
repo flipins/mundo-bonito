@@ -284,7 +284,13 @@ NORMAL = normalize(mat3(VIEW_MATRIX) * (MODEL_NORMAL_MATRIX * n_local));
 	// --- Oclusión horneada en los vértices ---
 	color *= mix(1.0 - fuerza_oclusion * 0.75, 1.0, ao);
 
-	ALBEDO = color;
+	// Praderas del recinto urbano. El puerto y las dunas conservan la arena.
+	float prado = smoothstep(-300.0, -260.0, posicion_local.x)
+		* (1.0 - smoothstep(32.0, 62.0, posicion_local.x))
+		* (1.0 - smoothstep(108.0, 147.0, abs(posicion_local.z)))
+		* (1.0 - roca);
+	vec3 hierba = mix(vec3(0.07, 0.20, 0.08), vec3(0.25, 0.44, 0.15), mancha);
+	ALBEDO = mix(color, hierba * (0.7 + 0.6 * dot(arena, vec3(0.33))) * ao, prado * 0.90);
 	AO = mix(1.0 - fuerza_oclusion * 0.5, 1.0, ao);
 	AO_LIGHT_AFFECT = 0.35;
 	ROUGHNESS = mix(0.95, 0.90, roca);

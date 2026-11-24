@@ -62,14 +62,14 @@ script = ExtResource("1_o6lbb")
 
 [node name="CityJsonGenerator" type="Node3D" parent="." unique_id=546221959]
 script = ExtResource("2_3cey1")
-paso_malla_v25 = 8.0
+cantidad_casas = 180
 textura_roca_albedo = ExtResource("3_yg0ts")
 textura_roca_normal = ExtResource("4_jcny0")
 textura_suelo_a_albedo = ExtResource("5_ejdax")
 textura_suelo_a_normal = ExtResource("6_aab3w")
 textura_suelo_b_albedo = ExtResource("7_rruwo")
 textura_suelo_b_normal = ExtResource("8_x72yn")
-x_castillo_montana = -250.0
+x_castillo_montana = -178.0
 radio_meseta = 26.0
 
 [node name="GeneratedCity" type="Node3D" parent="CityJsonGenerator" unique_id=668037103]

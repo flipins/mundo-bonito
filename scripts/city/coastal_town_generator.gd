@@ -113,91 +113,277 @@ func _antorcha_ciudad(padre: Node3D, pos: Vector3) -> void:
 # El generador original elige los lotes, sitúa cada casa sobre el terreno
 # y crea el cimiento a partir de la pieza llamada "Cuerpo".
 
-const KIT_CASAS := {
-	"yeso": preload("res://assets/medieval_village/Export/Wall_Plaster_Straight.gltf"),
-	"ladrillo": preload("res://assets/medieval_village/Export/Wall_UnevenBrick_Straight.gltf"),
-	"pared_puerta": preload("res://assets/medieval_village/Export/Wall_Plaster_Door_Round.gltf"),
-	"pared_ventana": preload("res://assets/medieval_village/Export/Wall_Plaster_Window_Wide_Round.gltf"),
-	"ventana": preload("res://assets/medieval_village/Export/Window_Wide_Round1.gltf"),
-	"puerta": preload("res://assets/medieval_village/Export/Door_1_Round.gltf"),
-	"marco": preload("res://assets/medieval_village/Export/DoorFrame_Round_Brick.gltf"),
-	"techo_corto": preload("res://assets/medieval_village/Export/Roof_RoundTiles_6x6.gltf"),
-	"techo_largo": preload("res://assets/medieval_village/Export/Roof_RoundTiles_6x8.gltf"),
-	"frente_techo": preload("res://assets/medieval_village/Export/Roof_Front_Brick6.gltf")
-}
+const VILLA := "res://assets/medieval_village/Export/"
+const MERCADO := "res://assets/fantasy_props/export/"
+const CAMPAMENTO := "res://AnimpicStudio/POLY - Medieval Camp/Prefabs/"
+# Ancho y largo en paneles de dos metros, seguidos del número de plantas.
+const CASAS := [Vector3i(2, 3, 2), Vector3i(3, 3, 2), Vector3i(4, 4, 1),
+	Vector3i(3, 4, 1), Vector3i(2, 2, 3), Vector3i(3, 5, 2)]
+var _modelos_villa: Dictionary = {}
+var _lotes_malla: Dictionary = {}
+
+
+# Terrazas a ambos lados de la avenida. Las transiciones se integran en la
+# malla del valle y en la colisión que el terreno genera a partir de ella.
+func _altura_desierto(x: float, z: float) -> float:
+	var base := super._altura_desierto(x, z)
+	var distancia := absf(z - CENTRO_PLAZA.y)
+	if distancia < 9 or distancia > 145 or x > -55 or x < _entrada_x() + 12:
+		return base
+	var borde := smoothstep(_entrada_x() + 12, _entrada_x() + 58, x)
+	borde *= 1.0 - smoothstep(-121, -55, x)
+	borde *= 1.0 - smoothstep(110, 145, distancia)
+	if z < 8:
+		borde *= smoothstep(54, 86, Vector2(x, z).distance_to(CENTRO_CASTILLO))
+	borde *= smoothstep(15, 36, Vector2(x, z).distance_to(_centro_cuarto))
+	var primera := 4.0 * smoothstep(9, 33, distancia)
+	var segunda := 5.5 * smoothstep(62, 90, distancia)
+	return base + borde * (primera + segunda)
+
+
+# Cada calle lateral nace en la avenida. Se reservan los solares por pares,
+# con la puerta mirando hacia la calle que sirve a esa fila.
+func _entrada_x() -> float:
+	# La puerta y los dos muros laterales comparten este arranque.
+	return -145.0 - longitud_camino_llegada * 0.23
+
+
+func _paseo_costero(z: float) -> Vector2:
+	return Vector2(_costa(z) - 3.0, z)
+
+
+func _barrio_pescadores(suelo: SurfaceTool, primero: int) -> int:
+	var cantidad := 0
+	for z: float in [-69,-58,-47,-36,-25,-14,-3,46,57,68,79,90,101]:
+		if primero + cantidad >= cantidad_casas:
+			break
+		var solar := Vector2(_costa(z) - 12.0, z)
+		# Mantener una franja libre alrededor de las bodegas del puerto.
+		if absf(solar.x - 57) < 11 and z > -62 and z < -8:
+			continue
+		_giro_calle = -PI * 0.5
+		var numero := primero + cantidad
+		_crear_casa(numero, solar)
+		var tipo: Vector3i = CASAS[numero % CASAS.size()]
+		var umbral := solar + Vector2(tipo.y, 1 if tipo.x % 2 == 0 else 0)
+		_pavimentar(suelo, umbral, _paseo_costero(umbral.y), 2.0, 0.12)
+		cantidad += 1
+	# El camino acompaña la orilla y cruza la rampa de madera en z = 28.
+	var previo := _paseo_costero(-72)
+	for z in range(-70, 105, 2):
+		var punto := _paseo_costero(z)
+		_pavimentar(suelo, previo, punto, 4.0, 0.10)
+		previo = punto
+	_pavimentar(suelo, Vector2(72,28), _paseo_costero(28), 4.4, 0.12)
+	return cantidad
+
+
+func _trazar_barrios() -> void:
+	if cantidad_casas <= 0:
+		return
+	var calles: Dictionary = {}
+	var solares: Array[Vector2] = []
+	var cruces: Array[float] = []
+	var x := CENTRO_PLAZA.x + 78.0
+	while x > _entrada_x() + 23:
+		cruces.append(x)
+		x -= 26
+	for calle_x in cruces:
+		for sentido: int in [-1, 1]:
+			if calle_x > 39 and sentido < 0:
+				continue
+			for distancia: int in [18, 29, 40, 51, 62, 73, 84, 95, 106, 117, 128]:
+				var z := CENTRO_PLAZA.y + sentido * distancia
+				var cruce := Vector2(calle_x, z)
+				var inicio := Vector2(calle_x, CENTRO_PLAZA.y)
+				if _distancia_segmento(CENTRO_CASTILLO, inicio, cruce) < 48.0:
+					break
+				if _distancia_segmento(_habitacion_xz(), inicio, cruce) < 10.0:
+					break
+				for lado: int in [-1, 1]:
+					var solar := cruce + Vector2(6.8 * lado, 0)
+					if solar.x < _costa(z) - 24 and _lote_valido(solar) and not (absf(solar.x - CENTRO_PLAZA.x) < 32 and absf(solar.y - CENTRO_PLAZA.y) < 33):
+						solares.append(solar)
+						calles[solar] = cruce
+	# Selección reproducible para repartir las casas entre calles y niveles.
+	for i in range(solares.size() - 1, 0, -1):
+		var j := _rng.randi_range(0, i)
+		var tmp := solares[i]
+		solares[i] = solares[j]
+		solares[j] = tmp
+	var suelo := SurfaceTool.new()
+	suelo.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var extremos: Dictionary = {}
+	# Dos frentes continuos cierran la plaza; los huecos centrales son entradas.
+	var portales := 0
+	for frente: int in [-1, 1]:
+		for dx: float in [-20.0, -9.5, 9.5, 20.0]:
+			if portales >= cantidad_casas:
+				break
+			_giro_calle = 0.0 if frente > 0 else PI
+			var parcela := CENTRO_PLAZA + Vector2(dx, frente * 24)
+			_crear_casa(portales, parcela)
+			_pavimentar(suelo, CENTRO_PLAZA + Vector2(dx, frente * 18),
+				parcela - Vector2(0, frente * 2), 3.0, 0.13)
+			portales += 1
+	var costeras := _barrio_pescadores(suelo, portales)
+	portales += costeras
+	var cantidad := mini(cantidad_casas - portales, solares.size())
+	var molinos: Array[Vector2] = []
+	for n in cantidad:
+		var solar := solares[n]
+		var cruce: Vector2 = calles[solar]
+		var direccion := signf(cruce.x - solar.x)
+		_giro_calle = atan2(-direccion, 0.0)
+		var numero := n + portales
+		_crear_casa(numero, solar)
+		var tipo: Vector3i = CASAS[numero % CASAS.size()]
+		if generar_decoracion and solar.x < -100 and absf(solar.y - 8) > 50 and molinos.size() < 2:
+			if molinos.is_empty() or molinos[0].distance_to(solar) > 65:
+				_molino(_capa("Buildings").get_node("Casa_%03d" % numero), tipo)
+				molinos.append(solar)
+		var desfase := 1.0 if tipo.x % 2 == 0 else 0.0
+		var umbral := solar + Vector2(direccion * tipo.y, direccion * desfase)
+		var acceso := Vector2(cruce.x, umbral.y)
+		_pavimentar(suelo, acceso, umbral, 1.8, 0.12)
+		var clave := Vector2(cruce.x, signf(acceso.y - CENTRO_PLAZA.y))
+		var alcance := absf(acceso.y - CENTRO_PLAZA.y) + 1.5
+		extremos[clave] = maxf(extremos.get(clave, 0.0), alcance)
+	var borde_este := CENTRO_PLAZA.x
+	for clave: Vector2 in extremos:
+		borde_este = maxf(borde_este, clave.x)
+		var inicio := Vector2(clave.x, CENTRO_PLAZA.y)
+		_pavimentar(suelo, inicio, inicio + Vector2(0, clave.y * float(extremos[clave])), 4.6, 0.10)
+	_pavimentar(suelo, Vector2(_entrada_x(), CENTRO_PLAZA.y), CENTRO_PLAZA, 8.0, 0.14)
+	if borde_este > CENTRO_PLAZA.x:
+		_pavimentar(suelo, CENTRO_PLAZA + Vector2(10, 0), Vector2(borde_este, CENTRO_PLAZA.y), 5.0, 0.13)
+	_pavimentar(suelo, Vector2(borde_este, CENTRO_PLAZA.y), _paseo_costero(CENTRO_PLAZA.y), 4.0, 0.13)
+	print("Casas frente al muelle: ", costeras)
+	_agregar_malla(_capa("Environment"), "CallesDelBarrio", suelo.commit(), _camino, false)
+	print("Barrios conectados: %d casas, %d calles laterales." % [cantidad + portales, extremos.size()])
+
+
+var _giro_calle := 0.0
+var _centro_cuarto := Vector2(-120, 70)
+
+
+func _pavimentar(st: SurfaceTool, a: Vector2, b: Vector2, ancho: float, alza: float) -> void:
+	var avance := a.direction_to(b)
+	var lateral := Vector2(-avance.y, avance.x) * ancho * 0.5
+	var pasos := maxi(1, ceili(a.distance_to(b) / 2.0))
+	for i in pasos:
+		var p := a.lerp(b, float(i) / pasos)
+		var q := a.lerp(b, float(i + 1) / pasos)
+		for v: Vector2 in [p - lateral, q - lateral, q + lateral,
+				p - lateral, q + lateral, p + lateral]:
+			st.set_normal(Vector3.UP)
+			st.set_uv(v * 0.35)
+			st.add_vertex(Vector3(v.x, _altura_desierto(v.x, v.y) + alza, v.y))
+
+
+func _crear_barrio() -> void:
+	_lotes_malla.clear()
+	_trazar_barrios()
+	var edificios := _capa("Buildings")
+	for sector: Vector2i in _lotes_malla:
+		var grupo := Node3D.new()
+		edificios.add_child(grupo)
+		grupo.position = Vector3(sector.x * 48, 0, sector.y * 48)
+		for malla: Mesh in _lotes_malla[sector]:
+			var posiciones: Array = _lotes_malla[sector][malla]
+			var lote := MultiMesh.new()
+			lote.transform_format = MultiMesh.TRANSFORM_3D
+			lote.mesh = malla
+			lote.instance_count = posiciones.size()
+			for i in posiciones.size():
+				var t: Transform3D = posiciones[i]
+				t.origin -= grupo.position
+				lote.set_instance_transform(i, t)
+			var dibujo := MultiMeshInstance3D.new()
+			dibujo.multimesh = lote
+			grupo.add_child(dibujo)
+	print("Ciudad modular: ", _modelos_villa.size(), " modelos del pack medieval en el barrio.")
+	_lotes_malla.clear()
+
+
+func _pieza_modular(casa: Node3D, modelo: String, punto: Vector3, giro := 0.0) -> void:
+	if not _modelos_villa.has(modelo):
+		var escena := load(VILLA + modelo + ".gltf") as PackedScene
+		if escena == null:
+			return
+		var raiz := escena.instantiate() as Node3D
+		var partes: Array = []
+		_leer_mallas_villa(raiz, Transform3D.IDENTITY, partes)
+		raiz.free()
+		_modelos_villa[modelo] = partes
+	var sector := Vector2i(floori(casa.position.x / 48), floori(casa.position.z / 48))
+	if not _lotes_malla.has(sector):
+		_lotes_malla[sector] = {}
+	var t := casa.transform * Transform3D(Basis(Vector3.UP, giro), punto)
+	for parte: Array in _modelos_villa[modelo]:
+		var malla: Mesh = parte[0]
+		if not _lotes_malla[sector].has(malla):
+			_lotes_malla[sector][malla] = []
+		_lotes_malla[sector][malla].append(t * parte[1])
+
+
+func _leer_mallas_villa(nodo: Node3D, padre: Transform3D, partes: Array) -> void:
+	var t := padre * nodo.transform
+	if nodo is MeshInstance3D and nodo.mesh != null:
+		partes.append([nodo.mesh, t])
+	for hijo in nodo.get_children():
+		if hijo is Node3D:
+			_leer_mallas_villa(hijo, t, partes)
 
 
 func _crear_casa(numero: int, posicion: Vector2) -> void:
 	var casa := Node3D.new()
 	casa.name = "Casa_%03d" % numero
-	casa.position = Vector3(posicion.x, 0.0, posicion.y)
 	_capa("Buildings").add_child(casa)
-
-	# La fachada está en -Z. Oriéntala hacia la plaza.
-	var hacia_plaza := CENTRO_PLAZA - posicion
-	casa.rotation.y = atan2(-hacia_plaza.x, -hacia_plaza.y)
-
-	# Cada panel del pack mide 2 m de ancho y 3 m de alto.
-	var ancho := 6.0
-	var paneles_laterales := 4 if numero % 3 == 0 else 3
-	var largo := paneles_laterales * 2.0
-	var frente := -largo * 0.5
-	var fondo := largo * 0.5
-	var pared := "ladrillo" if numero % 2 == 0 else "yeso"
-
-	# El generador original lee "Cuerpo" para calcular el cimiento.
-	# Esta caja invisible conserva también la colisión exterior de la casa.
-	var cuerpo := _caja(
-		casa, "Cuerpo", Vector3(0, 1.5, 0),
-		Vector3(ancho, 3.0, largo), _piedra
-	)
+	casa.position = Vector3(posicion.x, _altura_desierto(posicion.x, posicion.y), posicion.y)
+	casa.rotation.y = _giro_calle
+	var tipo: Vector3i = CASAS[numero % CASAS.size()]
+	var pie := posicion + Vector2(-sin(_giro_calle), -cos(_giro_calle)) * tipo.y
+	casa.position.y = _altura_desierto(pie.x, pie.y) + 0.10
+	var alto := 3.0 * tipo.z
+	var cuerpo := _caja(casa, "Cuerpo", Vector3.UP * alto * 0.5,
+		Vector3(tipo.x * 2, alto, tipo.y * 2), _piedra)
 	cuerpo.visible = false
-
-	# Fachada: ventana, puerta y ventana.
-	_pieza_villa(casa, "pared_puerta", Vector3(0, 0, frente))
-	_pieza_villa(casa, "marco", Vector3(0, 0, frente))
-	# El origen del modelo de puerta está en la bisagra.
-	_pieza_villa(casa, "puerta", Vector3(-0.51, 0, frente - 0.05))
-
-	for x: float in [-2.0, 2.0]:
-		_pieza_villa(casa, "pared_ventana", Vector3(x, 0, frente))
-		_pieza_villa(casa, "ventana", Vector3(x, 0, frente))
-
-	# Parte trasera de la casa.
-	for x: float in [-2.0, 0.0, 2.0]:
-		_pieza_villa(casa, pared, Vector3(x, 0, fondo), 180.0)
-
-	# Laterales. Una ventana en cada costado.
-	for i in range(paneles_laterales):
-		var z := frente + 1.0 + i * 2.0
-		for lado: float in [-1.0, 1.0]:
-			var punto := Vector3(lado * ancho * 0.5, 0, z)
-			var giro := -lado * 90.0
-			if i == 1:
-				_pieza_villa(casa, "pared_ventana", punto, giro)
-				_pieza_villa(casa, "ventana", punto, giro)
-			else:
-				_pieza_villa(casa, pared, punto, giro)
-
-	# Cierra los extremos triangulares bajo el tejado.
-	_pieza_villa(casa, "frente_techo", Vector3(0, 3.0, frente))
-	_pieza_villa(casa, "frente_techo", Vector3(0, 3.0, fondo), 180.0)
-
-	var techo := "techo_largo" if paneles_laterales == 4 else "techo_corto"
-	_pieza_villa(casa, techo, Vector3(0, 3.0, 0))
-
-
-func _pieza_villa(
-	casa: Node3D,
-	clave: String,
-	posicion_local: Vector3,
-	giro_grados: float = 0.0
-) -> void:
-	var escena := KIT_CASAS[clave] as PackedScene
-	var pieza := escena.instantiate() as Node3D
-	casa.add_child(pieza)
-	pieza.position = posicion_local
-	pieza.rotation.y = deg_to_rad(giro_grados)
+	_caja(casa, "Cimiento", Vector3.DOWN * 0.85,
+		Vector3(tipo.x * 2, 1.7, tipo.y * 2), _piedra_oscura, false)
+	var forma := "Round" if numero % 2 == 0 else "Flat"
+	var puerta: int = [1, 2, 4, 8][numero % 4]
+	var marco := "Brick" if numero % 3 == 0 else "WoodDark"
+	for piso in tipo.z:
+		var material := "UnevenBrick" if piso == 0 and numero % 3 != 0 else "Plaster"
+		for lado in 4:
+			var giro := lado * PI / 2.0
+			var paneles := tipo.x if lado % 2 == 0 else tipo.y
+			var fondo := tipo.y if lado % 2 == 0 else tipo.x
+			for i in paneles:
+				var punto := Vector3(2 * i + 1 - paneles, piso * 3, -fondo).rotated(Vector3.UP, giro)
+				var base := "Wall_" + material + "_"
+				if lado == 0 and piso == 0 and i == floori(paneles * 0.5):
+					_pieza_modular(casa, base + "Door_" + forma, punto, giro)
+					_pieza_modular(casa, "DoorFrame_%s_%s" % [forma, marco], punto, giro)
+					_pieza_modular(casa, "Door_%d_%s" % [puerta, forma],
+						punto + Vector3(-0.51, 0, -0.05).rotated(Vector3.UP, giro), giro)
+				elif (i + lado + piso) % 2 == 0:
+					_pieza_modular(casa, base + "Window_Wide_" + forma, punto, giro)
+					_pieza_modular(casa, "Window_Wide_" + forma + "1", punto, giro)
+					if generar_decoracion and lado == 0:
+						_pieza_modular(casa, "WindowShutters_Wide_" + forma + "_Open", punto, giro)
+				else:
+					if piso > 0 and material == "Plaster":
+						_pieza_modular(casa, "Wall_Plaster_WoodGrid", punto, giro)
+					else:
+						_pieza_modular(casa, base + "Straight", punto, giro)
+	if generar_decoracion and numero % 5 == 0:
+		_pieza_modular(casa, "Prop_Vine2", Vector3(-tipo.x + 0.4,0,-tipo.y-0.18))
+	var hastial := "Roof_Front_Brick%d" % (tipo.x * 2)
+	_pieza_modular(casa, hastial, Vector3(0, alto, -tipo.y))
+	_pieza_modular(casa, hastial, Vector3(0, alto, tipo.y), PI)
+	_pieza_modular(casa, "Roof_RoundTiles_%dx%d" % [tipo.x * 2, tipo.y * 2], Vector3.UP * alto)
 
 
 func _azotea_ciudad(casa: Node3D, ancho: float, largo: float, alto: float) -> void:
@@ -342,6 +528,7 @@ func _crear_plaza() -> void:
 		1.28, 0.45, 0.40, _piedra
 	)
 
+	_ornamentar_plaza(padre, centro)
 	var indice := 0
 	for fila: float in [-1.0, 1.0]:
 		for desplazamiento_x: float in [-18.0, -6.0, 6.0, 18.0]:
@@ -350,44 +537,130 @@ func _crear_plaza() -> void:
 			indice += 1
 
 
+func _molino(casa: Node3D, tipo: Vector3i) -> void:
+	var buje := Node3D.new()
+	buje.name = "Aspas"
+	buje.position = Vector3(0, tipo.z * 3.0 + 1.8, -tipo.y - 1.1)
+	buje.rotation.z = 0.35
+	casa.add_child(buje)
+	for i in 4:
+		var brazo := Node3D.new()
+		brazo.rotation.z = i * PI / 2
+		buje.add_child(brazo)
+		_caja(brazo, "Mastil", Vector3(0, 2.35, 0), Vector3(0.15, 4.7, 0.19), _madera, false)
+		_caja(brazo, "Vela", Vector3(0.44, 3.05, -0.02), Vector3(0.86, 3.1, 0.10), _adobe_claro_ciudad, false)
+
+
+func _ornamentar_plaza(padre: Node3D, centro: Vector3) -> void:
+	_cilindro_ciudad(padre, "AguaSuperior", centro + Vector3.UP * 3.15, 1.14, 1.14, 0.065, _agua_fuente_ciudad)
+	# Ocho chorros trazan arcos desde la copa hasta el estanque.
+	var chorros := SurfaceTool.new()
+	chorros.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 8:
+		var radial := Vector3(cos(i*TAU/8),0,sin(i*TAU/8))
+		var lateral := radial.cross(Vector3.UP)
+		for j in 12:
+			var a := j / 12.0
+			var b := (j+1) / 12.0
+			var inicio := centro + radial * (1.10 + 1.35*a) + Vector3.UP*(3.15 + 0.85*a - 3.15*a*a)
+			var fin := centro + radial * (1.10 + 1.35*b) + Vector3.UP*(3.15 + 0.85*b - 3.15*b*b)
+			var eje := (fin-inicio).normalized().cross(lateral)
+			for k in 5:
+				var n := lateral*cos(TAU*k/5) + eje*sin(TAU*k/5)
+				var m := lateral*cos(TAU*(k+1)/5) + eje*sin(TAU*(k+1)/5)
+				for v: Vector3 in [inicio+n*0.065, fin+n*0.065, fin+m*0.065, inicio+n*0.065, fin+m*0.065, inicio+m*0.065]:
+					chorros.set_normal((n+m).normalized())
+					chorros.add_vertex(v)
+	_agregar_malla(padre, "ChorrosFuente", chorros.commit(), _mat(Color("#8ad6e1")), false)
+	# Los adoquines forman anillos concéntricos con juntas alternadas.
+	var piedra := StandardMaterial3D.new()
+	piedra.vertex_color_use_as_albedo = true
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for fila in 12:
+		var r := 3.3 + fila * 0.60
+		var pasos := ceili(TAU * r / 1.25)
+		for i in pasos:
+			var a := TAU * (i + 0.5 * (fila % 2)) / pasos
+			var b := a + TAU / pasos - 0.004
+			var u := Vector3(cos(a), 0, sin(a))
+			var v := Vector3(cos(b), 0, sin(b))
+			var tono := Color("#e6c689") if fila < 10 else Color("#aebbb9")
+			for esquina: Vector3 in [u*r, u*(r+0.57), v*(r+0.57), u*r, v*(r+0.57), v*r]:
+				st.set_normal(Vector3.UP)
+				st.set_color(tono.darkened(0.03 * ((i + fila * 3) % 5)))
+				st.add_vertex(centro + Vector3.UP * 0.17 + esquina)
+	_agregar_malla(padre, "RosetonDeAdoquines", st.commit(), piedra, false)
+	if not generar_decoracion:
+		return
+	var hojas: Array[Transform3D] = []
+	var colores: Array[Color] = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = semilla + 29
+	for sx: int in [-1, 1]:
+		for sz: int in [-1, 1]:
+			var jardin := centro + Vector3(10.3 * sx, 0, 7.2 * sz)
+			_cilindro_ciudad(padre, "Jardinera", jardin + Vector3.UP * 0.28, 1.85, 1.65, 0.48, _piedra)
+			hojas.append(Transform3D(Basis.from_scale(Vector3(3.4, 1.1, 3.4)), jardin + Vector3.UP * 0.64))
+			colores.append(Color("#41914b"))
+			for flor in 48:
+				var theta := rng.randf() * TAU
+				var radio := sqrt(rng.randf()) * 1.55
+				var centro_flor := jardin + Vector3(cos(theta)*radio, 0.73 + 0.50 * sqrt(1.0-pow(radio/1.7,2)), sin(theta)*radio)
+				hojas.append(Transform3D(Basis.from_scale(Vector3(0.19,0.13,0.19)), centro_flor))
+				colores.append(Color("#ffd45a") if flor % 3 else Color("#fff2dd"))
+			var arbol := centro + Vector3(sx * 22, 0, sz * 8)
+			_cilindro_ciudad(padre, "Tronco", arbol + Vector3.UP * 2, 0.22, 0.38, 4.0, _madera)
+			for j in 6:
+				var t := TAU * j / 5
+				var offset := Vector3(1.25*cos(t),4.0+0.35*sin(2*t),1.25*sin(t)) if j < 5 else Vector3.UP * 5.8
+				hojas.append(Transform3D(Basis.from_scale(Vector3(3.1,3.8,3.0)), arbol + offset))
+				colores.append(Color("#39854a") if j % 2 else Color("#69a650"))
+	var bola := SphereMesh.new()
+	bola.radial_segments = 8
+	bola.rings = 3
+	bola.material = piedra
+	var plantas := MultiMesh.new()
+	plantas.transform_format = MultiMesh.TRANSFORM_3D
+	plantas.use_colors = true
+	plantas.mesh = bola
+	plantas.instance_count = hojas.size()
+	for j in hojas.size():
+		plantas.set_instance_transform(j, hojas[j])
+		plantas.set_instance_color(j, colores[j])
+	var vegetacion := MultiMeshInstance3D.new()
+	vegetacion.name = "ArbolesYFlores"
+	vegetacion.multimesh = plantas
+	padre.add_child(vegetacion)
+
+
 func _puesto_ciudad(padre: Node3D, pos: Vector3, fila: float, indice: int) -> void:
-	var tela: Material = _tela_roja
-	if indice % 3 == 1:
-		tela = _tela_ocre
-	elif indice % 3 == 2:
-		tela = _tela_azul
-
-	_caja(
-		padre, "Mostrador", pos + Vector3.UP * 0.65,
-		Vector3(4.2, 1.3, 2.8), _madera, false
-	)
-
-	var toldo := _caja(
-		padre, "Toldo", pos + Vector3.UP * 3.10,
-		Vector3(5.2, 0.16, 3.9), tela, false
-	)
-	toldo.rotation.x = -fila * 0.12
-
-	for dx: float in [-2.3, 2.3]:
-		for dz: float in [-1.65, 1.65]:
-			_caja(
-				padre, "PostePuesto", pos + Vector3(dx, 1.52, dz),
-				Vector3(0.16, 3.04, 0.16), _madera, false
-			)
-
+	var puestos := ["Stall_Empty", "Stall_Cart_Empty", "Workbench_Drawers", "Table_Large"]
+	var carga := ["FarmCrate_Apple", "FarmCrate_Carrot", "Anvil_Log", "Pot_1_Lid",
+		"Barrel_Apples", "Crate_Wooden", "Whetstone", "Vase_4"]
+	var apoyo := ["Bucket_Wooden_1", "Barrel", "Dummy", "Stool",
+		"Bag", "Bench", "WeaponStand", "Chair_1"]
+	var giro := 180.0 if fila > 0 else 0.0
+	pos.y += 0.11
+	colocar_modelo_ciudad(padre, MERCADO + puestos[indice % 4] + ".gltf", pos, 3.0 if indice % 4 >= 2 else 4.6, giro)
 	if generar_decoracion:
+		colocar_modelo_ciudad(padre, MERCADO + carga[indice] + ".gltf",
+			pos + Vector3(2.95, 0, -fila * 0.7), 1.15, giro)
+		colocar_modelo_ciudad(padre, MERCADO + apoyo[indice] + ".gltf",
+			pos + Vector3(-3.15, 0, fila * 0.65), 1.35, giro)
 		if indice % 2 == 0:
-			_vasija_ciudad(padre, pos + Vector3(0.9, 1.30, 0))
-		else:
-			_barril_ciudad(padre, pos + Vector3(2.9, 0, 0))
-const CAJON_MANZANAS := "res://assets/fantasy_props/export/FarmCrate_Apple.gltf"
-const CAJON_ZANAHORIAS := "res://assets/fantasy_props/export/FarmCrate_Carrot.gltf"
+			var tienda: String = ["Tent_01", "Tent_02", "Tent_03", "Tent_04"][indice >> 1]
+			colocar_modelo_ciudad(padre, CAMPAMENTO + tienda + ".prefab.scn",
+				pos + Vector3(0, 0, fila * 4.1), 3.5, giro)
+
+
 const CARRETA_PLAZA := "res://assets/medieval_village/Export/Prop_Wagon.gltf"
 const COFRE_HABITACION := "res://assets/interior_zappypixel/Export/box.04_animation.glb"
-const TIENDA_CAMPAMENTO := "res://AnimpicStudio/POLY - Medieval Camp/Models/Tent_01.gltf"
+const TIENDA_CAMPAMENTO := "res://AnimpicStudio/POLY - Medieval Camp/Prefabs/Tent_01.prefab.scn"
 
 
 func generar_ciudad() -> void:
+	_centro_cuarto = _habitacion_xz()
 	super.generar_ciudad()
 
 	if not is_node_ready() or not generar_decoracion:
